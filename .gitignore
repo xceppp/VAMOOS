@@ -1,5 +1,4 @@
 node_modules
-dist
 .env
 *.local
 .DS_Store
@@ -7,6 +6,11 @@ __pycache__/
 *.pyc
 apps/server/.env
 apps/web/dist
+# Ship compiled API + UI for hosts that skip/fail remote builds
+!apps/server/dist/
+!apps/server/dist/**
+!apps/server/public/
+!apps/server/public/**
 apps/web/android/.gradle
 apps/web/android/app/build
 apps/web/android/build
