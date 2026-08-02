@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nProvider';
 
 export interface PredictionCardProps {
   home: string;
@@ -17,36 +18,38 @@ export function PredictionCard({
   confidence,
   href,
   external,
-  risk = 'orange',
 }: PredictionCardProps) {
+  const { t } = useI18n();
   const pct = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
   const body = (
     <>
-      <div className="pred-card__match">
-        {home} <span className="pred-card__vs">vs</span> {away}
-      </div>
-      <div className="pred-card__pick">{pick}</div>
+      <p className="pred-card__match">
+        {home} vs {away}
+      </p>
+      <p className="pred-card__pick">{pick}</p>
       <div className="pred-card__bar" aria-hidden>
         <span className="pred-card__bar-fill" style={{ width: `${pct}%` }} />
       </div>
-      <div className={`pred-card__pct pred-card__pct--${risk}`}>{pct}%</div>
+      <p className="pred-card__pct">
+        {pct}% {t('predConfidence')}
+      </p>
     </>
   );
 
   if (!href) {
-    return <article className={`pred-card pred-card--${risk}`}>{body}</article>;
+    return <article className="pred-card">{body}</article>;
   }
 
   if (external) {
     return (
-      <a className={`pred-card pred-card--${risk}`} href={href} target="_blank" rel="noreferrer">
+      <a className="pred-card" href={href} target="_blank" rel="noreferrer">
         {body}
       </a>
     );
   }
 
   return (
-    <Link className={`pred-card pred-card--${risk}`} to={href}>
+    <Link className="pred-card" to={href}>
       {body}
     </Link>
   );

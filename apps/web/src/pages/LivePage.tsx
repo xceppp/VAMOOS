@@ -50,17 +50,6 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
 
   return (
     <section className="page">
-      <div className="page__intro">
-        <h1>{t('liveTitle')}</h1>
-        <p>
-          {mode === 'demo'
-            ? t('liveDemo')
-            : sort === 'ending'
-              ? t('liveEnding')
-              : t('livePopular')}
-        </p>
-      </div>
-
       <div className="sort-bar" role="group" aria-label={t('sortAria')}>
         <button
           type="button"
@@ -78,10 +67,16 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
         </button>
       </div>
 
+      {mode === 'demo' ? <p className="section-label">{t('liveDemo')}</p> : null}
+
       {!liveMatches.length ? (
-        <p className="empty">{t('noLive')}</p>
+        <div className="empty">
+          <i className="ti ti-ball-football" aria-hidden />
+          <p>{t('noLive')}</p>
+        </div>
       ) : sort === 'ending' ? (
         <div className="match-list">
+          <p className="section-label">{t('sortEnding')}</p>
           {endingList.map((m, i) => (
             <div key={m.id}>
               <MatchCard
@@ -89,6 +84,7 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
                 favorited={isFav(m.id)}
                 onToggleFavorite={() => onToggle(m.id)}
                 highlight={pulseId === m.id}
+                hideLeague={false}
               />
               {i === 2 ? <AdSlot format="infeed" className="ad-slot--feed" /> : null}
             </div>
@@ -97,13 +93,13 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
       ) : (
         grouped.map((block, bi) => (
           <section key={block.leagueId ?? block.league} className="league-block">
-            <h2>
+            <p className="section-label">
               {block.logo ? (
-                <img src={block.logo} alt="" className="league-crest" width={18} height={18} />
+                <img src={block.logo} alt="" className="league-crest" width={14} height={14} />
               ) : null}
               {block.league}
               {block.country ? <em className="league-country">{block.country}</em> : null}
-            </h2>
+            </p>
             <div className="match-list">
               {block.matches.map((m) => (
                 <MatchCard

@@ -1,22 +1,21 @@
-/* VAMOOS premium design tokens — dark default, light via [data-theme="light"] */
+/* VAMOOS premium tokens — light-weight demo palette */
 
 :root,
 [data-theme='dark'] {
-  --bg: #0b0d10;
-  --surface: #15181d;
-  --surface-2: #1c2027;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --text: #f3f1ec;
-  --text-secondary: #a6abb3;
-  --text-muted: #666b73;
-  --gold: #c9a46b;
-  --gold-soft: rgba(201, 164, 107, 0.14);
-  --gold-text: #e4c48d;
-  --red: #e5554b;
-  --red-soft: rgba(229, 85, 75, 0.16);
+  --bg: #0f1215;
+  --surface: #171a1f;
+  --surface-2: #1d2126;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.11);
+  --text: #e9e7e1;
+  --text-secondary: #979ba1;
+  --text-muted: #62666c;
+  --gold: #bfa06e;
+  --gold-soft: rgba(191, 160, 110, 0.1);
+  --gold-text: #c9ad80;
+  --red: #c8564c;
+  --red-soft: rgba(200, 86, 76, 0.12);
 
-  /* Legacy aliases used across existing CSS */
   --ink: var(--text);
   --ink-soft: var(--text-secondary);
   --line: var(--border);
@@ -26,38 +25,38 @@
   --pitch: var(--surface-2);
   --pitch-bright: var(--gold);
   --bg-deep: var(--bg);
-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-  --radius: 16px;
+  --shadow: none;
+  --radius: 14px;
   --font-ui: 'Manrope', system-ui, sans-serif;
   --font-score: 'Space Grotesk', 'Manrope', sans-serif;
-  --font-display: var(--font-score);
+  --font-display: var(--font-ui);
   --font-body: var(--font-ui);
 }
 
 [data-theme='light'] {
-  --bg: #f6f4ef;
+  --bg: #faf9f6;
   --surface: #ffffff;
-  --surface-2: #f0ede6;
-  --border: rgba(20, 18, 14, 0.09);
-  --border-strong: rgba(20, 18, 14, 0.16);
-  --text: #16140f;
-  --text-secondary: #6b665c;
-  --text-muted: #a29c8f;
-  --gold: #a87f3f;
-  --gold-soft: rgba(168, 127, 63, 0.12);
-  --gold-text: #7c5d2c;
-  --red: #c43d33;
-  --red-soft: rgba(196, 61, 51, 0.1);
-  --shadow: 0 10px 28px rgba(20, 18, 14, 0.08);
+  --surface-2: #f2f0ea;
+  --border: rgba(20, 18, 14, 0.07);
+  --border-strong: rgba(20, 18, 14, 0.12);
+  --text: #201e19;
+  --text-secondary: #7a756b;
+  --text-muted: #aca79b;
+  --gold: #a08453;
+  --gold-soft: rgba(160, 132, 83, 0.09);
+  --gold-text: #8a6f41;
+  --red: #b85248;
+  --red-soft: rgba(184, 82, 72, 0.08);
 }
 
 [dir='rtl'] body {
   font-family: 'Almarai', var(--font-ui), sans-serif;
+  font-weight: 400;
 }
 
+[dir='rtl'] .score,
 [dir='rtl'] .score-num,
 [dir='rtl'] .kickoff-time,
-[dir='rtl'] .match-odds,
 [dir='rtl'] .pred-card__pct,
 [dir='rtl'] .goal-alert__score {
   font-family: var(--font-score);

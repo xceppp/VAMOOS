@@ -2,8 +2,10 @@ export type Lang = 'en' | 'ar';
 
 export const translations = {
   en: {
-    brand: 'VAMOOS',
+    brand: 'Vamoos',
     brandSub: 'Livescores',
+    predConfidence: 'confidence',
+    favEmptyHint: 'Tap the star on any match to add it here.',
     navLive: 'Live',
     navLiveShort: 'Live',
     navLeagues: 'Leagues',
@@ -89,7 +91,7 @@ export const translations = {
     notifyIntro: 'Personalize alerts for your favorite matches.',
     notifyEvents: 'Sound & toast events',
     muteAll: 'Mute all alerts',
-    goalAlertBar: 'Goal alerts (in-app bar)',
+    goalAlertBar: 'Goal alerts',
     webPushAlerts: 'Web push (when app is backgrounded)',
     volume: 'Volume ({n}%)',
     eventGoal: 'Goals (plays your song)',
@@ -129,8 +131,10 @@ export const translations = {
     notifTitle: 'VAMOOS',
   },
   ar: {
-    brand: 'VAMOOS',
+    brand: 'Vamoos',
     brandSub: 'نتائج مباشرة',
+    predConfidence: 'ثقة',
+    favEmptyHint: 'انقر على النجمة بجانب أي مباراة لإضافتها هنا.',
     navLive: 'مباشر',
     navLiveShort: 'مباشر',
     navLeagues: 'الدوريات',
@@ -216,7 +220,7 @@ export const translations = {
     notifyIntro: 'خصّص تنبيهات مبارياتك المفضلة.',
     notifyEvents: 'أحداث الصوت والتنبيهات',
     muteAll: 'كتم كل التنبيهات',
-    goalAlertBar: 'تنبيهات الأهداف (شريط داخل التطبيق)',
+    goalAlertBar: 'تنبيهات الأهداف',
     webPushAlerts: 'إشعارات الويب (عند إغلاق التطبيق)',
     volume: 'الصوت ({n}%)',
     eventGoal: 'الأهداف (تشغّل أغنيتك)',

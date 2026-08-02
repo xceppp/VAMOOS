@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
 import { MatchCard } from '../components/MatchCard';
 import { useI18n } from '../i18n/I18nProvider';
@@ -25,32 +24,22 @@ export function FavoritesPage({
 
   return (
     <section className="page">
-      <div className="page__intro">
-        <h1>{t('favTitle')}</h1>
-        <p>{t('favIntro')}</p>
-      </div>
+      <p className="section-label">{t('favTitle')}</p>
 
       <AdSlot format="banner" className="ad-slot--feed" />
 
       {!favoriteIds.length ? (
-        <div className="empty-panel empty-panel--icon">
-          <span className="empty-panel__icon" aria-hidden>
-            ★
-          </span>
-          <p>{t('favNone')}</p>
-          <p className="muted">
-            {t('favGoLive')} <Link to="/">{t('navLive')}</Link> {t('favStarHint')}
-          </p>
+        <div className="empty">
+          <i className="ti ti-star" aria-hidden />
+          <p>{t('favEmptyHint')}</p>
         </div>
       ) : !favMatches.length ? (
-        <div className="empty-panel empty-panel--icon">
-          <span className="empty-panel__icon" aria-hidden>
-            ◷
-          </span>
+        <div className="empty">
+          <i className="ti ti-clock" aria-hidden />
           <p>{t('favNotLive')}</p>
-          {missing.length > 0 && (
+          {missing.length > 0 ? (
             <p className="muted">{t('favWaiting', { n: missing.length })}</p>
-          )}
+          ) : null}
         </div>
       ) : (
         <div className="match-list">
@@ -61,6 +50,7 @@ export function FavoritesPage({
               favorited={isFav(m.id)}
               onToggleFavorite={() => onToggle(m.id)}
               highlight={pulseId === m.id}
+              hideLeague={false}
             />
           ))}
         </div>

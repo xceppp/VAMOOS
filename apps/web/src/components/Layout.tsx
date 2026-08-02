@@ -13,14 +13,14 @@ interface LayoutProps {
 }
 
 export function Layout({ children, mode, connected, rateLimited, notice }: LayoutProps) {
-  const { t, toggleLang } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const { theme, toggleTheme } = useTheme();
 
   const tabs: TabItem[] = [
     { to: '/', label: t('navLive'), short: t('navLiveShort'), end: true },
-    { to: '/upcoming', label: t('navUpcoming'), short: t('navUpcomingShort') },
-    { to: '/favorites', label: t('navFavorites'), short: t('navFavoritesShort') },
     { to: '/predictions', label: t('navPredictions'), short: t('navPredictionsShort') },
+    { to: '/favorites', label: t('navFavorites'), short: t('navFavoritesShort') },
+    { to: '/upcoming', label: t('navUpcoming'), short: t('navUpcomingShort') },
     { to: '/notify', label: t('navSettings'), short: t('navSettingsShort') },
   ];
 
@@ -36,27 +36,42 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand">
-          <span className="brand__mark">{t('brand')}</span>
-          <span className="brand__sub">{t('brandSub')}</span>
+        <div className="logo">
+          <div className="logo-mark" aria-hidden>
+            <i className="ti ti-ball-football" />
+          </div>
+          <span className="logo-text">{t('brand')}</span>
         </div>
-        <div className="topbar__end">
-          <button type="button" className="lang-toggle" onClick={toggleLang} aria-label={t('langSwitch')}>
-            {t('langSwitch')}
-          </button>
+
+        <div className="header-right">
+          <div className="lang-toggle" role="group" aria-label={t('langSwitch')}>
+            <button
+              type="button"
+              className={lang === 'en' ? 'active' : ''}
+              onClick={() => setLang('en')}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              className={lang === 'ar' ? 'active' : ''}
+              onClick={() => setLang('ar')}
+            >
+              AR
+            </button>
+          </div>
+
           <button
             type="button"
-            className="theme-toggle"
+            className="icon-btn"
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? t('themeLight') : t('themeDark')}
           >
-            {theme === 'dark' ? t('themeLight') : t('themeDark')}
+            <i className={theme === 'dark' ? 'ti ti-moon' : 'ti ti-sun'} aria-hidden />
           </button>
-          <div className="conn">
+
+          <div className="conn" title={connected ? modeLabel : t('reconnecting')}>
             <span className={`dot${connected ? (rateLimited ? ' dot--warn' : ' dot--on') : ''}`} />
-            <span className="conn__text">
-              {connected ? (rateLimited ? t('limited') : modeLabel) : t('reconnecting')}
-            </span>
           </div>
         </div>
       </header>

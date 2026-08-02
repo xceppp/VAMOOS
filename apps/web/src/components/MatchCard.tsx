@@ -10,28 +10,34 @@ interface MatchCardProps {
   highlight?: boolean;
   predictionTag?: string;
   cardId?: string;
+  /** Hide league label on the card when a section header already shows it. */
+  hideLeague?: boolean;
 }
 
-function TeamCrest({ logo, size = 22 }: { logo?: string; size?: number }) {
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 3).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+}
+
+function TeamAvatar({ logo, name }: { logo?: string; name: string }) {
   const [broken, setBroken] = useState(false);
-  if (!logo || broken) return <span className="crest crest--fallback" style={{ width: size, height: size }} />;
-  return (
-    <img
-      src={logo}
-      alt=""
-      className="crest"
-      width={size}
-      height={size}
-      loading="lazy"
-      decoding="async"
-      onError={() => setBroken(true)}
-    />
-  );
-}
-
-function fmtOdd(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  return n.toFixed(2);
+  if (logo && !broken) {
+    return (
+      <img
+        src={logo}
+        alt=""
+        className="avatar avatar--img"
+        width={25}
+        height={25}
+        loading="lazy"
+        decoding="async"
+        onError={() => setBroken(true)}
+      />
+    );
+  }
+  return <span className="avatar">{initials(name)}</span>;
 }
 
 function formatKickoff(iso: string | undefined, lang: string): string {
@@ -49,6 +55,11 @@ function isLiveStatus(status: string): boolean {
   return ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE'].includes(status);
 }
 
+function fmtOdd(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—';
+  return n.toFixed(2);
+}
+
 export function MatchCard({
   match,
   favorited,
@@ -56,6 +67,7 @@ export function MatchCard({
   highlight,
   predictionTag,
   cardId,
+  hideLeague = true,
 }: MatchCardProps) {
   const navigate = useNavigate();
   const { t, lang } = useI18n();
@@ -86,7 +98,6 @@ export function MatchCard({
         'match-card',
         'match-card--clickable',
         highlight ? 'match-card--pulse' : '',
-        hasSideStats || hasOdds ? 'match-card--rich' : '',
         isUpcoming ? 'match-card--upcoming' : '',
         live ? 'match-card--live' : '',
       ]
@@ -102,103 +113,96 @@ export function MatchCard({
         }
       }}
     >
-      <div className="match-card__top">
-        <span className="match-card__league">{match.league}</span>
-        {live ? (
-          <span className="match-card__live">
-            <span className="live-pulse" aria-hidden>
-              <span className="live-pulse__dot" />
-              <span className="live-pulse__ring" />
+      <div className="card-top">
+        <div className="card-top__left">
+          {!hideLeague ? <span className="match-card__league">{match.league}</span> : null}
+          {live ? (
+            <span className="badge-live">
+              <span className="pulse-wrap" aria-hidden>
+                <span className="pulse-ring" />
+                <span className="pulse-dot" />
+              </span>
+              {showClock ? `${match.elapsed}'` : match.status}
             </span>
-            {showClock ? `${match.elapsed}'` : match.status}
-          </span>
-        ) : (
-          <span className="match-card__status">{isUpcoming ? t('kickoffShort') : match.status}</span>
-        )}
-      </div>
-
-      <div className="match-card__row">
-        <div className="match-card__body">
-          <div className="match-card__side">
-            <TeamCrest logo={match.home.logo} />
-            {hasSideStats && (
-              <span className="side-stats">
-                {stats?.possessionHome != null && (
-                  <span className="side-stats__poss">{stats.possessionHome}%</span>
-                )}
-                {stats?.cornersHome != null && (
-                  <span className="side-stats__corner">
-                    <img className="side-stats__corner-icon" src="/corner.png" alt="" width={12} height={12} />
-                    {stats.cornersHome}
-                  </span>
-                )}
-              </span>
-            )}
-            <span className="team-name">{match.home.name}</span>
-          </div>
-
-          <div className="match-card__score">
-            {isUpcoming ? (
-              <span className="kickoff-time">{formatKickoff(match.kickoff, lang)}</span>
-            ) : (
-              <>
-                <span className={`score-num${homeLeads ? ' score-num--lead' : ''}`}>{home}</span>
-                <span className="score-sep">–</span>
-                <span className={`score-num${awayLeads ? ' score-num--lead' : ''}`}>{away}</span>
-              </>
-            )}
-            {hasOdds && (
-              <div className="match-odds" aria-label="Live 1X2 odds">
-                <span className="match-odds__cell">
-                  <em>1</em>
-                  {fmtOdd(odds?.home)}
-                </span>
-                <span className="match-odds__cell">
-                  <em>X</em>
-                  {fmtOdd(odds?.draw)}
-                </span>
-                <span className="match-odds__cell">
-                  <em>2</em>
-                  {fmtOdd(odds?.away)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="match-card__side match-card__side--away">
-            <span className="team-name">{match.away.name}</span>
-            {hasSideStats && (
-              <span className="side-stats side-stats--away">
-                {stats?.possessionAway != null && (
-                  <span className="side-stats__poss">{stats.possessionAway}%</span>
-                )}
-                {stats?.cornersAway != null && (
-                  <span className="side-stats__corner">
-                    <img className="side-stats__corner-icon" src="/corner.png" alt="" width={12} height={12} />
-                    {stats.cornersAway}
-                  </span>
-                )}
-              </span>
-            )}
-            <TeamCrest logo={match.away.logo} />
-          </div>
+          ) : isUpcoming ? (
+            <span className="match-card__status">{formatKickoff(match.kickoff, lang)}</span>
+          ) : (
+            <span className="match-card__status">{match.status}</span>
+          )}
         </div>
-
         <button
           type="button"
-          className={`star-btn${favorited ? ' star-btn--on' : ''}`}
-          aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+          className={`star${favorited ? ' on' : ''}`}
+          aria-label={favorited ? t('favorited') : t('addFavorite')}
           onClick={(e) => {
             e.stopPropagation();
             onToggleFavorite();
           }}
         >
-          {favorited ? '★' : '☆'}
+          <i className={favorited ? 'ti ti-star-filled' : 'ti ti-star'} aria-hidden />
         </button>
       </div>
 
+      <div className="team-row">
+        <div className="team">
+          <TeamAvatar logo={match.home.logo} name={match.home.name} />
+          <span className="team-name">{match.home.name}</span>
+          {hasSideStats && stats?.possessionHome != null ? (
+            <span className="side-chip">{stats.possessionHome}%</span>
+          ) : null}
+          {hasSideStats && stats?.cornersHome != null ? (
+            <span className="side-chip side-chip--corner">
+              <img src="/corner.png" alt="" width={10} height={10} />
+              {stats.cornersHome}
+            </span>
+          ) : null}
+        </div>
+        <span className={`score${isUpcoming ? '' : homeLeads ? ' lead' : ''}`}>
+          {isUpcoming ? '–' : home}
+        </span>
+      </div>
+
+      <div className="team-row">
+        <div className="team">
+          <TeamAvatar logo={match.away.logo} name={match.away.name} />
+          <span className="team-name">{match.away.name}</span>
+          {hasSideStats && stats?.possessionAway != null ? (
+            <span className="side-chip">{stats.possessionAway}%</span>
+          ) : null}
+          {hasSideStats && stats?.cornersAway != null ? (
+            <span className="side-chip side-chip--corner">
+              <img src="/corner.png" alt="" width={10} height={10} />
+              {stats.cornersAway}
+            </span>
+          ) : null}
+        </div>
+        <span className={`score${isUpcoming ? '' : awayLeads ? ' lead' : ''}`}>
+          {isUpcoming ? '–' : away}
+        </span>
+      </div>
+
+      {hasOdds ? (
+        <div className="match-odds match-odds--inline" aria-label="1X2">
+          <span>
+            <em>1</em>
+            {fmtOdd(odds?.home)}
+          </span>
+          <span>
+            <em>X</em>
+            {fmtOdd(odds?.draw)}
+          </span>
+          <span>
+            <em>2</em>
+            {fmtOdd(odds?.away)}
+          </span>
+        </div>
+      ) : null}
+
       {predictionTag ? (
-        <div className="match-card__tag">{predictionTag}</div>
+        <div className="pred-tag">
+          <i className="ti ti-chart-bar" aria-hidden />
+          <span>{predictionTag}</span>
+        </div>
       ) : null}
     </article>
   );

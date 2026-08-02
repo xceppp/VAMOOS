@@ -135,20 +135,17 @@ export function PredictionsPage() {
 
   return (
     <section className="page page--predict">
-      <header className="pred-head">
-        <div>
-          <h1>{t('predTitle')}</h1>
-          <p>{t('predIntro')}</p>
-        </div>
+      <div className="pred-head pred-head--lite">
+        <p className="section-label">{t('predTitle')}</p>
         <button
           type="button"
-          className="btn btn--primary btn--compact"
+          className="btn btn--ghost btn--compact"
           disabled={scanBusy}
           onClick={() => void loadScan(true)}
         >
           {scanBusy ? t('predUpdating') : t('predRefresh')}
         </button>
-      </header>
+      </div>
 
       <AdSlot format="banner" className="ad-slot--feed" />
 

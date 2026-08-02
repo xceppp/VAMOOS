@@ -45,29 +45,26 @@ export function NotifyPage() {
 
   return (
     <section className="page page--narrow">
-      <div className="page__intro">
-        <h1>{t('notifyTitle')}</h1>
-        <p>{t('notifyIntro')}</p>
-      </div>
+      <p className="section-label">{t('notifyTitle')}</p>
 
       <AdSlot format="banner" className="ad-slot--feed" />
 
       <div className="settings">
-        <div className="settings__row">
-          <span>{t('muteAll')}</span>
-          <SettingsToggle
-            checked={settings.muted}
-            onChange={(muted) => updateNotifySettings({ muted })}
-            ariaLabel={t('muteAll')}
-          />
-        </div>
-
         <div className="settings__row">
           <span>{t('goalAlertBar')}</span>
           <SettingsToggle
             checked={settings.goalBar}
             onChange={(goalBar) => updateNotifySettings({ goalBar })}
             ariaLabel={t('goalAlertBar')}
+          />
+        </div>
+
+        <div className="settings__row">
+          <span>{t('muteAll')}</span>
+          <SettingsToggle
+            checked={settings.muted}
+            onChange={(muted) => updateNotifySettings({ muted })}
+            ariaLabel={t('muteAll')}
           />
         </div>
 

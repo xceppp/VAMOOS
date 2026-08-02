@@ -78,9 +78,9 @@ export function GoalAlertBar({ alert, onDismiss, onTap }: GoalAlertBarProps) {
       tabIndex={0}
     >
       <div className="goal-alert__left">
-        <span className="live-pulse" aria-hidden>
-          <span className="live-pulse__dot" />
-          <span className="live-pulse__ring" />
+        <span className="pulse-wrap" aria-hidden>
+          <span className="pulse-ring" />
+          <span className="pulse-dot" />
         </span>
         {crest ? (
           <img src={crest} alt="" className="goal-alert__crest" width={22} height={22} />
