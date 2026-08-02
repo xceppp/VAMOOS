@@ -1979,6 +1979,15 @@ html[dir='rtl'] .detail-hero__team--away {
   margin-bottom: 1rem;
 }
 
+.pred-head--lite {
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.pred-head--lite .section-label {
+  margin: 0;
+}
+
 .pred-head h1 {
   margin: 0;
   font-family: var(--font-display);
