@@ -39,6 +39,8 @@ export function useLiveSocket() {
         notice?: string | null;
       };
       applySnapshot(body);
+      // HTTP feed is enough to treat the app as online even if WS is blocked.
+      setConnected(true);
     } catch {
       /* ignore — WS may still be healthy */
     }

@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "cap:sync": "tsc -b && vite build --base ./ && npx cap sync",
+    "cap:sync": "tsc -b && vite build --mode capacitor --base ./ && npx cap sync",
     "cap:android": "npm run cap:sync && npx cap open android",
     "cap:ios": "npm run cap:sync && npx cap open ios",
     "cap:add:android": "npx cap add android",
