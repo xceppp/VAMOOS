@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nProvider';
+import { useTheme } from '../theme/ThemeProvider';
 import { AdSlot } from './AdSlot';
+import { TabNav, type TabItem } from './TabNav';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,15 +13,15 @@ interface LayoutProps {
 }
 
 export function Layout({ children, mode, connected, rateLimited, notice }: LayoutProps) {
-  const { t, toggleLang, lang } = useI18n();
+  const { t, toggleLang } = useI18n();
+  const { theme, toggleTheme } = useTheme();
 
-  const links = [
-    { to: '/', label: t('navLive'), short: t('navLiveShort'), end: true as const },
-    { to: '/leagues', label: t('navLeagues'), short: t('navLeaguesShort') },
-    { to: '/favorites', label: t('navFavorites'), short: t('navFavoritesShort') },
+  const tabs: TabItem[] = [
+    { to: '/', label: t('navLive'), short: t('navLiveShort'), end: true },
     { to: '/upcoming', label: t('navUpcoming'), short: t('navUpcomingShort') },
+    { to: '/favorites', label: t('navFavorites'), short: t('navFavoritesShort') },
     { to: '/predictions', label: t('navPredictions'), short: t('navPredictionsShort') },
-    { to: '/notify', label: t('navNotify'), short: t('navNotifyShort') },
+    { to: '/notify', label: t('navSettings'), short: t('navSettingsShort') },
   ];
 
   const modeLabel =
@@ -34,23 +35,22 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
 
   return (
     <div className="app-shell">
-      <div className="ambient" aria-hidden />
       <header className="topbar">
         <div className="brand">
           <span className="brand__mark">{t('brand')}</span>
           <span className="brand__sub">{t('brandSub')}</span>
         </div>
-        <nav className="nav" aria-label="Primary">
-          {links.map((link) => (
-            <NavLink key={link.to} to={link.to} end={'end' in link ? link.end : undefined}>
-              <span className="nav__full">{link.label}</span>
-              <span className="nav__short">{link.short}</span>
-            </NavLink>
-          ))}
-        </nav>
         <div className="topbar__end">
           <button type="button" className="lang-toggle" onClick={toggleLang} aria-label={t('langSwitch')}>
             {t('langSwitch')}
+          </button>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? t('themeLight') : t('themeDark')}
+          >
+            {theme === 'dark' ? t('themeLight') : t('themeDark')}
           </button>
           <div className="conn">
             <span className={`dot${connected ? (rateLimited ? ' dot--warn' : ' dot--on') : ''}`} />
@@ -60,12 +60,14 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
           </div>
         </div>
       </header>
+
+      <TabNav items={tabs} />
+
       <AdSlot format="banner" className="ad-slot--top" />
       {notice ? (
         <div className={`notice-banner${rateLimited ? ' notice-banner--warn' : ''}`}>{notice}</div>
       ) : null}
       <main className="main">{children}</main>
-      <span className="sr-only" data-lang={lang} />
     </div>
   );
 }

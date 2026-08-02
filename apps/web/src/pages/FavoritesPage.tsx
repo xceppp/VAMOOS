@@ -33,14 +33,20 @@ export function FavoritesPage({
       <AdSlot format="banner" className="ad-slot--feed" />
 
       {!favoriteIds.length ? (
-        <div className="empty-panel">
+        <div className="empty-panel empty-panel--icon">
+          <span className="empty-panel__icon" aria-hidden>
+            ★
+          </span>
           <p>{t('favNone')}</p>
-          <p>
+          <p className="muted">
             {t('favGoLive')} <Link to="/">{t('navLive')}</Link> {t('favStarHint')}
           </p>
         </div>
       ) : !favMatches.length ? (
-        <div className="empty-panel">
+        <div className="empty-panel empty-panel--icon">
+          <span className="empty-panel__icon" aria-hidden>
+            ◷
+          </span>
           <p>{t('favNotLive')}</p>
           {missing.length > 0 && (
             <p className="muted">{t('favWaiting', { n: missing.length })}</p>

@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useCallback, useEffect } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AudioGate } from './components/AudioGate';
+import { GoalAlertBar } from './components/GoalAlertBar';
 import { Layout } from './components/Layout';
 import { ToastStack } from './components/ToastStack';
 import { useAlertBridge } from './hooks/useAlertBridge';
 import { useFavorites } from './hooks/useFavorites';
+import { useGoalAlertQueue } from './hooks/useGoalAlertQueue';
 import { useLiveSocket } from './hooks/useLiveSocket';
 import { apiUrl } from './lib/apiBase';
 import { reloadAudioFromDb } from './lib/goalSong';
@@ -15,21 +17,24 @@ import { MatchDetailPage } from './pages/MatchDetailPage';
 import { NotifyPage } from './pages/NotifyPage';
 import { PredictionsPage } from './pages/PredictionsPage';
 import { UpcomingPage } from './pages/UpcomingPage';
+import { ThemeProvider } from './theme/ThemeProvider';
 
-export default function App() {
+function AppRoutes() {
+  const navigate = useNavigate();
   const { matches, mode, connected, rateLimited, notice, lastEvent, eventVersion } = useLiveSocket();
   const { ids, toggle, isFav } = useFavorites();
+  const goalQueue = useGoalAlertQueue();
   const { toasts, dismiss, audioGateOpen, enableAudio } = useAlertBridge(
     lastEvent,
     eventVersion,
     matches,
+    goalQueue.push,
   );
 
   useEffect(() => {
     void reloadAudioFromDb();
   }, []);
 
-  // Prioritize pulsing favorite matches on the server for near-instant goal alerts.
   useEffect(() => {
     void fetch(apiUrl('/api/watch'), {
       method: 'POST',
@@ -42,8 +47,27 @@ export default function App() {
   const pulseId = lastEvent?.type === 'goal' ? lastEvent.matchId : null;
   const displayMode = mode === 'connecting' ? 'connecting' : mode;
 
+  const onGoalTap = useCallback(
+    (alert: { matchId: number }) => {
+      goalQueue.dismiss();
+      navigate('/');
+      window.setTimeout(() => {
+        const el = document.getElementById(`match-${alert.matchId}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.classList.add('match-card--pulse');
+        window.setTimeout(() => el?.classList.remove('match-card--pulse'), 1200);
+      }, 50);
+    },
+    [goalQueue, navigate],
+  );
+
   return (
-    <BrowserRouter>
+    <>
+      <GoalAlertBar
+        alert={goalQueue.current}
+        onDismiss={goalQueue.dismiss}
+        onTap={onGoalTap}
+      />
       <Layout
         mode={displayMode}
         connected={connected}
@@ -91,6 +115,7 @@ export default function App() {
             element={<UpcomingPage isFav={isFav} onToggle={toggle} />}
           />
           <Route path="/notify" element={<NotifyPage />} />
+          <Route path="/settings" element={<Navigate to="/notify" replace />} />
           <Route path="/predictions" element={<PredictionsPage />} />
           <Route
             path="/match/:id"
@@ -107,6 +132,16 @@ export default function App() {
       </Layout>
       <ToastStack toasts={toasts} onDismiss={dismiss} />
       <AudioGate open={audioGateOpen} onEnable={enableAudio} />
-    </BrowserRouter>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

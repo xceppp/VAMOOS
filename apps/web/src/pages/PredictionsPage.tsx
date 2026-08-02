@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
+import { PredictionCard } from '../components/PredictionCard';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
 
@@ -47,64 +47,31 @@ function MatchRow({ pick }: { pick: LatePick }) {
   const risk = riskOf(pick);
   const riskLabel =
     risk === 'green' ? t('riskBet') : risk === 'orange' ? t('riskMaybe') : t('riskSkip');
-  const body = (
-    <>
-      <div className="pred-row__time">
-        <strong>{pick.minute}'</strong>
-        <span>{pick.status}</span>
-      </div>
-      <div className="pred-row__main">
-        <p className="pred-row__league">{pick.league}</p>
-        <p className="pred-row__teams">
-          <span className="pred-row__team">
-            {pick.homeLogo ? (
-              <img src={pick.homeLogo} alt="" className="crest" width={22} height={22} />
-            ) : (
-              <span className="crest crest--fallback" />
-            )}
-            {pick.home}
-          </span>
-          <em>{pick.score}</em>
-          <span className="pred-row__team pred-row__team--away">
-            {pick.away}
-            {pick.awayLogo ? (
-              <img src={pick.awayLogo} alt="" className="crest" width={22} height={22} />
-            ) : (
-              <span className="crest crest--fallback" />
-            )}
-          </span>
-        </p>
-      </div>
-      <div className="pred-row__stats">
-        <div className="pred-stat">
-          <span className="pred-stat__label">{t('statGoal')}</span>
-          <strong className={`pred-stat__val pred-stat__val--${pick.goalRisk}`}>
-            {(pick.pNextGoal * 100).toFixed(0)}%
-          </strong>
-        </div>
-        <div className="pred-stat">
-          <span className="pred-stat__label">{t('statCorner')}</span>
-          <strong className={`pred-stat__val pred-stat__val--${pick.cornerRisk}`}>
-            {(pick.pNextCorner * 100).toFixed(0)}%
-          </strong>
-        </div>
-      </div>
-      <div className={`pred-row__badge pred-row__badge--${risk}`}>{riskLabel}</div>
-    </>
-  );
+  const pickLabel = `${pick.minute}' · ${t('statGoal')} · ${riskLabel}`;
 
   if (pick.liveId) {
     return (
-      <Link className={`pred-row pred-row--${risk}`} to={`/match/${pick.liveId}`}>
-        {body}
-      </Link>
+      <PredictionCard
+        home={pick.home}
+        away={pick.away}
+        pick={pickLabel}
+        confidence={pick.pNextGoal}
+        href={`/match/${pick.liveId}`}
+        risk={risk}
+      />
     );
   }
 
   return (
-    <a className={`pred-row pred-row--${risk}`} href={pick.url} target="_blank" rel="noreferrer">
-      {body}
-    </a>
+    <PredictionCard
+      home={pick.home}
+      away={pick.away}
+      pick={pickLabel}
+      confidence={pick.pNextGoal}
+      href={pick.url}
+      external
+      risk={risk}
+    />
   );
 }
 
@@ -245,6 +212,8 @@ export function PredictionsPage() {
             : t('predEmptyFilter')}
         </p>
       ) : null}
+
+      <p className="pred-disclaimer">{t('predDisclaimer')}</p>
     </section>
   );
 }

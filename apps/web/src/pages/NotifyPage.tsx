@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AdSlot } from '../components/AdSlot';
+import { SettingsToggle } from '../components/SettingsToggle';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNotifySettings } from '../hooks/useNotifySettings';
 import {
@@ -52,14 +53,32 @@ export function NotifyPage() {
       <AdSlot format="banner" className="ad-slot--feed" />
 
       <div className="settings">
-        <label className="settings__row">
+        <div className="settings__row">
           <span>{t('muteAll')}</span>
-          <input
-            type="checkbox"
+          <SettingsToggle
             checked={settings.muted}
-            onChange={(e) => updateNotifySettings({ muted: e.target.checked })}
+            onChange={(muted) => updateNotifySettings({ muted })}
+            ariaLabel={t('muteAll')}
           />
-        </label>
+        </div>
+
+        <div className="settings__row">
+          <span>{t('goalAlertBar')}</span>
+          <SettingsToggle
+            checked={settings.goalBar}
+            onChange={(goalBar) => updateNotifySettings({ goalBar })}
+            ariaLabel={t('goalAlertBar')}
+          />
+        </div>
+
+        <div className="settings__row">
+          <span>{t('webPushAlerts')}</span>
+          <SettingsToggle
+            checked={settings.webPush}
+            onChange={(webPush) => updateNotifySettings({ webPush })}
+            ariaLabel={t('webPushAlerts')}
+          />
+        </div>
 
         <label className="settings__row settings__row--stack">
           <span>{t('volume', { n: Math.round(settings.volume * 100) })}</span>
@@ -74,16 +93,16 @@ export function NotifyPage() {
         </label>
 
         <fieldset className="settings__fieldset">
-          <legend>{t('notifyTitle')}</legend>
+          <legend>{t('notifyEvents')}</legend>
           {(['goal', 'kickoff', 'fulltime'] as NotifyEventKey[]).map((key) => (
-            <label key={key} className="settings__row">
+            <div key={key} className="settings__row">
               <span>{labelFor(key)}</span>
-              <input
-                type="checkbox"
+              <SettingsToggle
                 checked={settings.events[key]}
                 onChange={() => toggleEvent(key)}
+                ariaLabel={labelFor(key)}
               />
-            </label>
+            </div>
           ))}
         </fieldset>
 

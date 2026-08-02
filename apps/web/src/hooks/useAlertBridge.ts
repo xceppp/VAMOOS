@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
+import type { GoalAlertPayload } from '../components/GoalAlertBar';
 import type { LiveMatch, MatchEvent } from '../types';
-import { playGoalSong, shouldAlert, unlockAudio, type NotifyEventKey } from '../lib/goalSong';
+import {
+  playGoalSong,
+  shouldAlert,
+  shouldShowGoalBar,
+  shouldWebPush,
+  unlockAudio,
+  type NotifyEventKey,
+} from '../lib/goalSong';
 import { getFavorites } from '../store/favorites';
+
+export type GoalAlertHandler = (alert: GoalAlertPayload) => void;
 
 function mapEventType(type: MatchEvent['type']): NotifyEventKey | null {
   if (type === 'goal') return 'goal';
@@ -22,18 +32,23 @@ export function useAlertBridge(
   lastEvent: MatchEvent | null,
   eventVersion: number,
   matches: LiveMatch[],
+  onGoalAlert?: GoalAlertHandler,
 ) {
   const [toasts, setToasts] = useState<Array<{ id: string; text: string }>>([]);
   const [audioGateOpen, setAudioGateOpen] = useState(() => !getNotifySettingsUnlocked());
   const seenServer = useRef(0);
   const scoreMap = useRef(new Map<number, { h: number; a: number; status: string }>());
   const recentKeys = useRef(new Map<string, number>());
+  const onGoalAlertRef = useRef(onGoalAlert);
+  onGoalAlertRef.current = onGoalAlert;
 
   const fire = (opts: {
     key: NotifyEventKey;
     matchId: number;
     message: string;
     dedupe: string;
+    match?: LiveMatch;
+    scorerSide?: 'home' | 'away';
   }) => {
     const now = Date.now();
     for (const [k, at] of recentKeys.current) {
@@ -42,21 +57,44 @@ export function useAlertBridge(
     if (recentKeys.current.has(opts.dedupe)) return;
     recentKeys.current.set(opts.dedupe, now);
 
-    if (!shouldAlert(opts.key)) return;
-
     const id = `${opts.dedupe}-${now}`;
-    setToasts((t) => [{ id, text: opts.message }, ...t].slice(0, 5));
+    const m = opts.match;
 
-    if (opts.key === 'goal') {
-      void playGoalSong();
-      try {
-        navigator.vibrate?.([80, 40, 120]);
-      } catch {
-        /* ignore */
+    // In-app goal bar — independent of song / Web Push toggles
+    if (opts.key === 'goal' && m && onGoalAlertRef.current && shouldShowGoalBar()) {
+      const h = m.goals.home ?? 0;
+      const a = m.goals.away ?? 0;
+      onGoalAlertRef.current({
+        id,
+        matchId: m.id,
+        teams: `${m.home.name} vs ${m.away.name}`,
+        newScore: `${h}–${a}`,
+        scorer: opts.scorerSide === 'away' ? m.away.name : m.home.name,
+        minute: m.elapsed,
+        homeLogo: m.home.logo,
+        awayLogo: m.away.logo,
+        scorerSide: opts.scorerSide,
+      });
+    }
+
+    if (shouldAlert(opts.key)) {
+      setToasts((t) => [{ id, text: opts.message }, ...t].slice(0, 5));
+      if (opts.key === 'goal') {
+        void playGoalSong();
+        try {
+          navigator.vibrate?.([80, 40, 120]);
+        } catch {
+          /* ignore */
+        }
       }
     }
 
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (
+      shouldWebPush() &&
+      'Notification' in window &&
+      Notification.permission === 'granted' &&
+      document.visibilityState !== 'visible'
+    ) {
       try {
         new Notification('VAMOOS', {
           body: opts.message,
@@ -82,11 +120,16 @@ export function useAlertBridge(
 
     const h = lastEvent.match.goals.home ?? 0;
     const a = lastEvent.match.goals.away ?? 0;
+    const prev = scoreMap.current.get(lastEvent.matchId);
+    const scorerSide =
+      prev && h > prev.h ? 'home' : prev && a > prev.a ? 'away' : lastEvent.scorer;
     fire({
       key,
       matchId: lastEvent.matchId,
       message: lastEvent.message,
       dedupe: `${key}:${lastEvent.matchId}:${h}-${a}:${lastEvent.match.status}`,
+      match: lastEvent.match,
+      scorerSide: scorerSide ?? undefined,
     });
   }, [lastEvent, eventVersion]);
 
@@ -108,6 +151,8 @@ export function useAlertBridge(
           matchId: m.id,
           message: `GOAL! ${m.home.name} ${h}-${a} ${m.away.name}`,
           dedupe: `goal:${m.id}:${h}-${a}:${m.status}`,
+          match: m,
+          scorerSide: h > prev.h ? 'home' : 'away',
         });
       } else if (!isFinished(prev.status) && isFinished(m.status)) {
         fire({

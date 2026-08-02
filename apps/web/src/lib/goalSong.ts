@@ -4,6 +4,10 @@ export interface NotifySettings {
   muted: boolean;
   volume: number;
   events: Record<NotifyEventKey, boolean>;
+  /** In-app sliding goal alert bar (independent of Web Push / Notification). */
+  goalBar: boolean;
+  /** Browser / OS notifications when permission is granted. */
+  webPush: boolean;
   songName: string | null;
   unlocked: boolean;
 }
@@ -22,6 +26,8 @@ const DEFAULTS: NotifySettings = {
     kickoff: false,
     fulltime: true,
   },
+  goalBar: true,
+  webPush: true,
   songName: null,
   unlocked: false,
 };
@@ -51,6 +57,8 @@ function readSettings(): NotifySettings {
         kickoff: parsed.events?.kickoff ?? false,
         fulltime: parsed.events?.fulltime ?? true,
       },
+      goalBar: parsed.goalBar ?? true,
+      webPush: parsed.webPush ?? true,
       songName: parsed.songName ?? null,
       unlocked: Boolean(parsed.unlocked),
     };
@@ -269,4 +277,16 @@ export function shouldAlert(type: NotifyEventKey): boolean {
   const settings = readSettings();
   if (settings.muted) return false;
   return Boolean(settings.events[type]);
+}
+
+export function shouldShowGoalBar(): boolean {
+  const settings = readSettings();
+  if (settings.muted) return false;
+  return settings.goalBar !== false;
+}
+
+export function shouldWebPush(): boolean {
+  const settings = readSettings();
+  if (settings.muted) return false;
+  return settings.webPush !== false;
 }
