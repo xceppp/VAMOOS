@@ -48,7 +48,7 @@ export function FavoritesPage({
               key={m.id}
               match={m}
               favorited={isFav(m.id)}
-              onToggleFavorite={() => onToggle(m.id)}
+              onToggleFavorite={onToggle}
               highlight={pulseId === m.id}
               hideLeague={false}
             />

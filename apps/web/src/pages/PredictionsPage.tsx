@@ -83,9 +83,12 @@ export function PredictionsPage() {
   const [filter, setFilter] = useState<'all' | Risk>('all');
   const [query, setQuery] = useState('');
 
-  const loadScan = useCallback(async (force = false) => {
-    setScanBusy(true);
-    setScanError(null);
+  const loadScan = useCallback(async (force = false, soft = false) => {
+    // Soft background refresh: keep showing previous tips — no busy flicker.
+    if (!soft) {
+      setScanBusy(true);
+      setScanError(null);
+    }
     try {
       const q = force ? '?refresh=1&minMinute=75' : '?minMinute=75';
       const res = await fetch(apiUrl(`/api/predictions/late-goals${q}`));
@@ -93,15 +96,15 @@ export function PredictionsPage() {
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       setScan(json);
     } catch (err) {
-      setScanError(err instanceof Error ? err.message : 'Scan failed');
+      if (!soft) setScanError(err instanceof Error ? err.message : 'Scan failed');
     } finally {
-      setScanBusy(false);
+      if (!soft) setScanBusy(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadScan(true);
-    const id = window.setInterval(() => void loadScan(false), 12_000);
+    void loadScan(true, false);
+    const id = window.setInterval(() => void loadScan(false, true), 20_000);
     return () => window.clearInterval(id);
   }, [loadScan]);
 

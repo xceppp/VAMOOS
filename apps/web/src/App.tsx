@@ -35,13 +35,17 @@ function AppRoutes() {
     void reloadAudioFromDb();
   }, []);
 
+  // Debounce watch updates so starring doesn't hammer the server / UI.
   useEffect(() => {
-    void fetch(apiUrl('/api/watch'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchIds: ids }),
-      cache: 'no-store',
-    }).catch(() => {});
+    const timer = window.setTimeout(() => {
+      void fetch(apiUrl('/api/watch'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchIds: ids }),
+        cache: 'no-store',
+      }).catch(() => {});
+    }, 400);
+    return () => window.clearTimeout(timer);
   }, [ids]);
 
   const pulseId = lastEvent?.type === 'goal' ? lastEvent.matchId : null;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nProvider';
 import type { LiveMatch } from '../types';
@@ -6,7 +6,8 @@ import type { LiveMatch } from '../types';
 interface MatchCardProps {
   match: LiveMatch;
   favorited: boolean;
-  onToggleFavorite: () => void;
+  /** Stable callback — receives match id so parent can pass useFavorites().toggle */
+  onToggleFavorite: (matchId: number) => void;
   highlight?: boolean;
   predictionTag?: string;
   cardId?: string;
@@ -60,7 +61,7 @@ function fmtOdd(n: number | null | undefined): string {
   return n.toFixed(2);
 }
 
-export function MatchCard({
+function MatchCardInner({
   match,
   favorited,
   onToggleFavorite,
@@ -136,7 +137,7 @@ export function MatchCard({
           aria-label={favorited ? t('favorited') : t('addFavorite')}
           onClick={(e) => {
             e.stopPropagation();
-            onToggleFavorite();
+            onToggleFavorite(match.id);
           }}
         >
           <i className={favorited ? 'ti ti-star-filled' : 'ti ti-star'} aria-hidden />
@@ -207,3 +208,41 @@ export function MatchCard({
     </article>
   );
 }
+
+function matchVisualEqual(a: LiveMatch, b: LiveMatch): boolean {
+  if (a === b) return true;
+  return (
+    a.id === b.id &&
+    a.status === b.status &&
+    a.elapsed === b.elapsed &&
+    a.goals.home === b.goals.home &&
+    a.goals.away === b.goals.away &&
+    a.home.name === b.home.name &&
+    a.away.name === b.away.name &&
+    a.home.logo === b.home.logo &&
+    a.away.logo === b.away.logo &&
+    a.league === b.league &&
+    a.kickoff === b.kickoff &&
+    a.stats?.possessionHome === b.stats?.possessionHome &&
+    a.stats?.possessionAway === b.stats?.possessionAway &&
+    a.stats?.cornersHome === b.stats?.cornersHome &&
+    a.stats?.cornersAway === b.stats?.cornersAway &&
+    a.odds?.home === b.odds?.home &&
+    a.odds?.draw === b.odds?.draw &&
+    a.odds?.away === b.odds?.away
+  );
+}
+
+export const MatchCard = memo(function MatchCard(props: MatchCardProps) {
+  return <MatchCardInner {...props} />;
+}, (prev, next) => {
+  return (
+    matchVisualEqual(prev.match, next.match) &&
+    prev.favorited === next.favorited &&
+    prev.highlight === next.highlight &&
+    prev.predictionTag === next.predictionTag &&
+    prev.cardId === next.cardId &&
+    prev.hideLeague === next.hideLeague &&
+    prev.onToggleFavorite === next.onToggleFavorite
+  );
+});

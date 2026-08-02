@@ -72,7 +72,7 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
       {!liveMatches.length ? (
         <div className="empty">
           <i className="ti ti-ball-football" aria-hidden />
-          <p>{t('noLive')}</p>
+          <p>{mode === 'connecting' ? t('connecting') : t('noLive')}</p>
         </div>
       ) : sort === 'ending' ? (
         <div className="match-list">
@@ -82,7 +82,7 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
               <MatchCard
                 match={m}
                 favorited={isFav(m.id)}
-                onToggleFavorite={() => onToggle(m.id)}
+                onToggleFavorite={onToggle}
                 highlight={pulseId === m.id}
                 hideLeague={false}
               />
@@ -106,7 +106,7 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
                   key={m.id}
                   match={m}
                   favorited={isFav(m.id)}
-                  onToggleFavorite={() => onToggle(m.id)}
+                  onToggleFavorite={onToggle}
                   highlight={pulseId === m.id}
                 />
               ))}

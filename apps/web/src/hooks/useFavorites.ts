@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   getFavorites,
   notifyFavoritesChanged,
@@ -11,13 +11,13 @@ export function useFavorites() {
 
   useEffect(() => subscribeFavorites(() => setIds(getFavorites())), []);
 
-  const toggle = (id: number) => {
+  const toggle = useCallback((id: number) => {
     const next = toggleFavStore(id);
     notifyFavoritesChanged();
     setIds(next);
-  };
+  }, []);
 
-  const isFav = (id: number) => ids.includes(id);
+  const isFav = useCallback((id: number) => ids.includes(id), [ids]);
 
   return { ids, toggle, isFav };
 }

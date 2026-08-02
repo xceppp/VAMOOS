@@ -79,8 +79,8 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
       <TabNav items={tabs} />
 
       <AdSlot format="banner" className="ad-slot--top" />
-      {notice ? (
-        <div className={`notice-banner${rateLimited ? ' notice-banner--warn' : ''}`}>{notice}</div>
+      {notice && rateLimited ? (
+        <div className="notice-banner notice-banner--warn">{notice}</div>
       ) : null}
       <main className="main">{children}</main>
     </div>

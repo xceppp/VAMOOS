@@ -53,9 +53,11 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      setError(false);
+    const load = async (soft = false) => {
+      if (!soft) {
+        setLoading(true);
+        setError(false);
+      }
       try {
         const res = await fetch(apiUrl(`/api/fixtures?days=${UPCOMING_DAYS}`), {
           cache: 'no-store',
@@ -64,9 +66,10 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
         const data = (await res.json()) as { days?: FixturesDay[] };
         if (!cancelled) {
           setFixtureDays(Array.isArray(data.days) ? data.days : []);
+          setError(false);
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !soft) {
           setError(true);
           setFixtureDays([]);
         }
@@ -74,8 +77,8 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
         if (!cancelled) setLoading(false);
       }
     };
-    void load();
-    const timer = window.setInterval(() => void load(), 60_000);
+    void load(false);
+    const timer = window.setInterval(() => void load(true), 90_000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -129,7 +132,7 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
                   key={m.id}
                   match={m}
                   favorited={isFav(m.id)}
-                  onToggleFavorite={() => onToggle(m.id)}
+                  onToggleFavorite={onToggle}
                 />
               ))}
             </div>

@@ -2,6 +2,35 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiUrl, wsUrl } from '../lib/apiBase';
 import type { LiveMatch, MatchEvent, ServerMessage } from '../types';
 
+function matchSig(m: LiveMatch): string {
+  const g = m.goals;
+  const s = m.stats;
+  const o = m.odds;
+  return [
+    m.id,
+    m.status,
+    m.elapsed ?? '',
+    g.home ?? '',
+    g.away ?? '',
+    m.home.name,
+    m.away.name,
+    m.home.logo ?? '',
+    m.away.logo ?? '',
+    s?.possessionHome ?? '',
+    s?.possessionAway ?? '',
+    s?.cornersHome ?? '',
+    s?.cornersAway ?? '',
+    o?.home ?? '',
+    o?.draw ?? '',
+    o?.away ?? '',
+    m.popularity ?? '',
+  ].join('|');
+}
+
+function boardSig(matches: LiveMatch[]): string {
+  return matches.map(matchSig).join('||');
+}
+
 export function useLiveSocket() {
   const [matches, setMatches] = useState<LiveMatch[]>([]);
   const [mode, setMode] = useState<'live' | 'demo' | 'connecting'>('connecting');
@@ -10,8 +39,34 @@ export function useLiveSocket() {
   const [notice, setNotice] = useState<string | null>(null);
   const [lastEvent, setLastEvent] = useState<MatchEvent | null>(null);
   const [eventVersion, setEventVersion] = useState(0);
+
   const retryRef = useRef(0);
   const socketRef = useRef<WebSocket | null>(null);
+  const boardSigRef = useRef('');
+  const hasDataRef = useRef(false);
+  const wsOpenRef = useRef(false);
+  const lastOkAtRef = useRef(0);
+  const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markOnline = useCallback(() => {
+    lastOkAtRef.current = Date.now();
+    if (disconnectTimerRef.current) {
+      clearTimeout(disconnectTimerRef.current);
+      disconnectTimerRef.current = null;
+    }
+    setConnected(true);
+  }, []);
+
+  const scheduleOffline = useCallback(() => {
+    if (disconnectTimerRef.current) return;
+    // Grace period so brief WS blips don't flash "reconnecting"
+    disconnectTimerRef.current = setTimeout(() => {
+      disconnectTimerRef.current = null;
+      if (!wsOpenRef.current && Date.now() - lastOkAtRef.current > 4_000) {
+        setConnected(false);
+      }
+    }, 2_500);
+  }, []);
 
   const applySnapshot = useCallback(
     (payload: {
@@ -20,12 +75,27 @@ export function useLiveSocket() {
       rateLimited?: boolean;
       notice?: string | null;
     }) => {
-      setMatches(payload.matches);
+      // Never wipe a populated board with an empty payload (transient poll glitch).
+      if (payload.matches.length === 0 && hasDataRef.current) {
+        setMode(payload.mode);
+        setRateLimited(Boolean(payload.rateLimited));
+        if (payload.notice !== undefined) setNotice(payload.notice ?? null);
+        markOnline();
+        return;
+      }
+
+      const nextSig = boardSig(payload.matches);
+      if (nextSig !== boardSigRef.current) {
+        boardSigRef.current = nextSig;
+        setMatches(payload.matches);
+      }
+      if (payload.matches.length > 0) hasDataRef.current = true;
       setMode(payload.mode);
       setRateLimited(Boolean(payload.rateLimited));
       setNotice(payload.notice ?? null);
+      markOnline();
     },
-    [],
+    [markOnline],
   );
 
   const pullHttp = useCallback(async () => {
@@ -39,10 +109,8 @@ export function useLiveSocket() {
         notice?: string | null;
       };
       applySnapshot(body);
-      // HTTP feed is enough to treat the app as online even if WS is blocked.
-      setConnected(true);
     } catch {
-      /* ignore — WS may still be healthy */
+      /* WS may still be healthy */
     }
   }, [applySnapshot]);
 
@@ -65,14 +133,23 @@ export function useLiveSocket() {
         setEventVersion((v) => v + 1);
         setMatches((prev) => {
           const idx = prev.findIndex((m) => m.id === msg.event.matchId);
-          if (idx === -1) return [...prev, msg.event.match];
-          const next = [...prev];
-          next[idx] = msg.event.match;
+          let next: LiveMatch[];
+          if (idx === -1) {
+            next = [...prev, msg.event.match];
+          } else if (matchSig(prev[idx]!) === matchSig(msg.event.match)) {
+            return prev;
+          } else {
+            next = [...prev];
+            next[idx] = msg.event.match;
+          }
+          boardSigRef.current = boardSig(next);
+          hasDataRef.current = true;
           return next;
         });
+        markOnline();
       }
     },
-    [applySnapshot],
+    [applySnapshot, markOnline],
   );
 
   useEffect(() => {
@@ -86,7 +163,8 @@ export function useLiveSocket() {
 
       socket.onopen = () => {
         retryRef.current = 0;
-        setConnected(true);
+        wsOpenRef.current = true;
+        markOnline();
         void pullHttp();
       };
 
@@ -95,9 +173,9 @@ export function useLiveSocket() {
       };
 
       socket.onclose = () => {
-        setConnected(false);
-        setMode((m) => (m === 'connecting' ? 'connecting' : m));
-        const delay = Math.min(8000, 500 * 2 ** retryRef.current);
+        wsOpenRef.current = false;
+        scheduleOffline();
+        const delay = Math.min(8_000, 500 * 2 ** retryRef.current);
         retryRef.current += 1;
         timer = setTimeout(connect, delay);
       };
@@ -112,15 +190,33 @@ export function useLiveSocket() {
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
+      if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
       socketRef.current?.close();
     };
-  }, [handleMessage, pullHttp]);
+  }, [handleMessage, markOnline, pullHttp, scheduleOffline]);
 
-  // Safety net: if WS stalls, HTTP still refreshes scores (also feeds fast client alerts).
+  // Adaptive HTTP safety net — slow when WS is up so the board doesn't thrash.
   useEffect(() => {
-    void pullHttp();
-    const timer = window.setInterval(() => void pullHttp(), 2_000);
-    return () => window.clearInterval(timer);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const tick = () => {
+      if (cancelled) return;
+      void pullHttp().finally(() => {
+        if (cancelled) return;
+        const delay = wsOpenRef.current ? 10_000 : 2_500;
+        timer = setTimeout(tick, delay);
+      });
+    };
+
+    void pullHttp().finally(() => {
+      if (!cancelled) timer = setTimeout(tick, wsOpenRef.current ? 10_000 : 2_500);
+    });
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [pullHttp]);
 
   return { matches, mode, connected, rateLimited, notice, lastEvent, eventVersion };
