@@ -38,7 +38,7 @@ export interface MatchDetail {
     round?: string;
     events: MatchTimelineEvent[];
     statistics: MatchStatRow[];
-    /** Optional half/match breakdowns from Flashscore */
+    /** Optional half/match breakdowns from the live feed */
     statPeriods?: Array<{
         name: string;
         statistics: MatchStatRow[];
@@ -48,4 +48,4 @@ export interface MatchDetail {
 }
 export declare function fetchMatchDetail(apiKey: string, fixtureId: number): Promise<MatchDetail | null>;
 export declare function buildDemoMatchDetail(seed: LiveMatch): MatchDetail;
-export declare function buildFlashscoreMatchDetail(seed: LiveMatch): Promise<MatchDetail>;
+export declare function buildLiveFeedMatchDetail(seed: LiveMatch): Promise<MatchDetail>;

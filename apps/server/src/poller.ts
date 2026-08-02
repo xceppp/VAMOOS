@@ -4,11 +4,11 @@ import { diffMatches, toMap } from './diff.js';
 import { isRateLimitError } from './errors.js';
 import {
   applyScorePulse,
-  fetchFlashscoreLiveMatches,
+  fetchLiveFeedMatches,
   fetchMatchLiveOdds,
   fetchMatchScorePulse,
   fetchMatchStats,
-} from './flashscore.js';
+} from './liveFeed.js';
 import { matchCrowdScore } from './popularity.js';
 import type { LiveMatch, MatchOdds, MatchSideStats } from './types.js';
 import type { WsHub } from './ws.js';
@@ -20,7 +20,7 @@ export interface PollerState {
   rateLimitedUntil: number | null;
   lastOkAt: string | null;
   notice: string | null;
-  source: 'flashscore' | 'api-football' | 'demo';
+  source: 'live' | 'api-football' | 'demo';
   lastPulseAt: string | null;
 }
 
@@ -69,8 +69,8 @@ function carryBoardExtras(prevMatch: LiveMatch | undefined, next: LiveMatch): Li
   if (!prevMatch) return next;
   return {
     ...next,
-    homeFsTeamId: next.homeFsTeamId ?? prevMatch.homeFsTeamId,
-    awayFsTeamId: next.awayFsTeamId ?? prevMatch.awayFsTeamId,
+    homeProviderTeamId: next.homeProviderTeamId ?? prevMatch.homeProviderTeamId,
+    awayProviderTeamId: next.awayProviderTeamId ?? prevMatch.awayProviderTeamId,
     stats: prevMatch.stats,
     odds: prevMatch.odds,
   };
@@ -84,11 +84,11 @@ export function startPoller(
     pulseIntervalMs?: number;
     /** Possession / corners / odds refresh cadence */
     sideIntervalMs?: number;
-    /** Default flashscore — free + fast. api-football as optional override. */
-    source?: 'flashscore' | 'api-football';
+    /** Default live feed — free + fast. api-football as optional override. */
+    source?: 'live' | 'api-football';
   },
 ) {
-  const source = options.source ?? 'flashscore';
+  const source = options.source ?? 'live';
   const pulseIntervalMs = options.pulseIntervalMs ?? 800;
   const sideIntervalMs = options.sideIntervalMs ?? 8_000;
   const state: PollerState = {
@@ -111,7 +111,7 @@ export function startPoller(
   let sideCursor = 0;
   /** Keeps recently seen matches so detail/stats still resolve after they leave the live list. */
   const recentById = new Map<number, LiveMatch>();
-  /** Flashscore ids kept on the board briefly after FT so the final score is broadcast. */
+  /** Provider ids kept on the board briefly after FT so the final score is broadcast. */
   const retainUntil = new Map<string, number>();
   /** App match ids the client is watching (favorites) — pulsed first. */
   const watchIds = new Set<number>();
@@ -182,14 +182,14 @@ export function startPoller(
       if (until <= now) retainUntil.delete(id);
     }
     for (const m of prev.values()) {
-      if (!m.flashscoreId) continue;
+      if (!m.providerId) continue;
       if (m.status !== 'FT') {
-        retainUntil.set(m.flashscoreId, now + RETAIN_FT_MS);
-      } else if (!retainUntil.has(m.flashscoreId)) {
-        retainUntil.set(m.flashscoreId, now + RETAIN_FT_MS);
+        retainUntil.set(m.providerId, now + RETAIN_FT_MS);
+      } else if (!retainUntil.has(m.providerId)) {
+        retainUntil.set(m.providerId, now + RETAIN_FT_MS);
       }
     }
-    return fetchFlashscoreLiveMatches(
+    return fetchLiveFeedMatches(
       (input) =>
         matchCrowdScore({
           league: input.league,
@@ -222,15 +222,15 @@ export function startPoller(
         state.source = source;
         state.rateLimited = false;
         state.rateLimitedUntil = null;
-        state.notice = source === 'flashscore' ? 'Live from Flashscore' : null;
+        state.notice = source === 'live' ? 'Live scores' : null;
         state.lastOkAt = new Date().toISOString();
       } catch (err) {
-        if (source === 'flashscore' && options.apiKey) {
-          console.warn('[poller] Flashscore failed, trying API-Football', err);
+        if (source === 'live' && options.apiKey) {
+          console.warn('[poller] Live feed failed, trying API-Football', err);
           next = await fetchLiveFixtures(options.apiKey);
           state.mode = 'live';
           state.source = 'api-football';
-          state.notice = 'Flashscore unavailable — using API-Football backup.';
+          state.notice = 'Live feed unavailable — using API-Football backup.';
           state.lastOkAt = new Date().toISOString();
         } else {
           throw err;
@@ -285,8 +285,8 @@ export function startPoller(
         state.matches = !started ? getDemoMatches() : tickDemoMatches().matches;
         prev = toMap(state.matches);
         state.notice =
-          source === 'flashscore'
-            ? 'Flashscore unreachable — demo matches.'
+          source === 'live'
+            ? 'Live feed unreachable — demo matches.'
             : 'Live API unavailable — running demo matches.';
         started = true;
         broadcastSnapshot();
@@ -300,15 +300,15 @@ export function startPoller(
     }
   }
 
-  /** Fast path: hit Flashscore's tiny per-match score feed for in-play games. */
+  /** Fast path: hit the tiny per-match score feed for in-play games. */
   async function tickPulse() {
-    if (pulseInFlight || source !== 'flashscore') return;
+    if (pulseInFlight || source !== 'live') return;
     if (!state.matches.length) return;
 
     pulseInFlight = true;
     try {
       const targets = state.matches
-        .filter((m) => m.flashscoreId && isInPlay(m.status))
+        .filter((m) => m.providerId && isInPlay(m.status))
         .sort((a, b) => Number(watchIds.has(b.id)) - Number(watchIds.has(a.id)));
 
       if (!targets.length) return;
@@ -316,7 +316,7 @@ export function startPoller(
       const updated = new Map<number, LiveMatch>();
 
       await mapPool(targets, 20, async (m) => {
-        const pulse = await fetchMatchScorePulse(m.flashscoreId!);
+        const pulse = await fetchMatchScorePulse(m.providerId!);
         if (!pulse) return;
         const next = applyScorePulse(m, pulse);
         const oldH = m.goals.home ?? 0;
@@ -347,12 +347,12 @@ export function startPoller(
 
   /** Slower path: possession, corners, live 1X2 odds for the main list. */
   async function tickSide() {
-    if (sideInFlight || source !== 'flashscore') return;
+    if (sideInFlight || source !== 'live') return;
     if (!state.matches.length) return;
 
     sideInFlight = true;
     try {
-      const inPlay = state.matches.filter((m) => m.flashscoreId && isInPlay(m.status));
+      const inPlay = state.matches.filter((m) => m.providerId && isInPlay(m.status));
       if (!inPlay.length) return;
 
       const watched = inPlay.filter((m) => watchIds.has(m.id));
@@ -370,10 +370,10 @@ export function startPoller(
       const updated = new Map<number, LiveMatch>();
 
       await mapPool(targets, 6, async (m) => {
-        const fsId = m.flashscoreId!;
+        const feedId = m.providerId!;
         const [stats, odds] = await Promise.all([
-          fetchMatchStats(fsId),
-          fetchMatchLiveOdds(fsId, m.homeFsTeamId, m.awayFsTeamId),
+          fetchMatchStats(feedId),
+          fetchMatchLiveOdds(feedId, m.homeProviderTeamId, m.awayProviderTeamId),
         ]);
 
         const nextStats: MatchSideStats | undefined = stats

@@ -21,9 +21,9 @@ export interface MatchOdds {
 
 export interface LiveMatch {
   id: number;
-  flashscoreId?: string;
-  homeFsTeamId?: string;
-  awayFsTeamId?: string;
+  providerId?: string;
+  homeProviderTeamId?: string;
+  awayProviderTeamId?: string;
   league: string;
   leagueId?: number;
   leagueLogo?: string;

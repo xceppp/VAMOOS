@@ -1,13 +1,13 @@
-/** Scan Flashscore live matches for last-15-min goal + corner potential. */
+/** Scan live feed matches for last-15-min goal + corner potential. */
 
 import type { AiscoreParsed } from './aiscoreParse.js';
 import {
   fetchFootballFeed,
   fetchStatsForMatches,
-  type FlashscoreMatch,
-  type FlashscoreStats,
-} from './flashscore.js';
-import { flashscoreIdToNumber } from './flashscore.js';
+  providerIdToNumber,
+  type LiveFeedMatch,
+  type FeedStats,
+} from './liveFeed.js';
 import { analyzeGoalPotential, type GoalPotentialResult, type RiskLevel } from './goalPotential.js';
 
 export interface LateGoalPick {
@@ -46,7 +46,7 @@ export interface LateGoalPick {
 
 export interface LateGoalScanResult {
   at: string;
-  source: 'flashscore';
+  source: 'live';
   liveTotal: number;
   lateWindowTotal: number;
   scannedWithStats: number;
@@ -59,7 +59,7 @@ export interface LateGoalScanResult {
 const CACHE_MS = 12_000;
 let cache: { at: number; data: LateGoalScanResult } | null = null;
 
-function toParsed(match: FlashscoreMatch, stats: FlashscoreStats | null): AiscoreParsed {
+function toParsed(match: LiveFeedMatch, stats: FeedStats | null): AiscoreParsed {
   const cornersH = stats?.cornersHome ?? null;
   const cornersA = stats?.cornersAway ?? null;
   const totalH = stats?.totalShotsHome ?? null;
@@ -94,14 +94,15 @@ function toParsed(match: FlashscoreMatch, stats: FlashscoreStats | null): Aiscor
     xgHome: stats?.xgHome ?? null,
     xgAway: stats?.xgAway ?? null,
     source: 'mixed',
-    notes: [`Flashscore live · ${match.league}`],
+    notes: [`Live feed · ${match.league}`],
   };
 }
 
-function toPick(match: FlashscoreMatch, analysis: GoalPotentialResult, stats: FlashscoreStats | null): LateGoalPick {
+function toPick(match: LiveFeedMatch, analysis: GoalPotentialResult, stats: FeedStats | null): LateGoalPick {
+  const liveId = providerIdToNumber(match.id);
   return {
     matchId: match.id,
-    liveId: flashscoreIdToNumber(match.id),
+    liveId,
     league: match.league,
     home: match.home,
     away: match.away,
@@ -110,7 +111,7 @@ function toPick(match: FlashscoreMatch, analysis: GoalPotentialResult, stats: Fl
     score: analysis.match.score,
     minute: match.minute ?? analysis.match.minute ?? 0,
     status: match.status,
-    url: match.url,
+    url: `/match/${liveId}`,
     pNextGoal: analysis.model.pNextGoal,
     pNextCorner: analysis.model.pNextCorner,
     expectedExtraGoals: analysis.model.expectedExtraGoals,
@@ -136,7 +137,7 @@ function toPick(match: FlashscoreMatch, analysis: GoalPotentialResult, stats: Fl
   };
 }
 
-function isLateWindow(m: FlashscoreMatch, minMinute: number): boolean {
+function isLateWindow(m: LiveFeedMatch, minMinute: number): boolean {
   if (m.status === 'FT' || m.status === 'NS' || m.status === 'HT') return false;
   if (m.status === 'ET') return true;
   if (m.minute == null) return false;
@@ -182,7 +183,7 @@ export async function scanLateGoalPotential(opts?: {
 
   const data: LateGoalScanResult = {
     at: new Date().toISOString(),
-    source: 'flashscore',
+    source: 'live',
     liveTotal: live.filter((m) => m.status === 'LIVE' || m.status === 'ET').length,
     lateWindowTotal: late.length,
     scannedWithStats: toFetch.length,

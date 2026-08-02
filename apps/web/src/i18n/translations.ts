@@ -123,7 +123,7 @@ export const translations = {
     noLineups: 'Lineups not available.',
     autoRefresh: 'Auto-refresh on',
     loading: 'Loading…',
-    flashscoreStats: 'Live match stats',
+    liveMatchStats: 'Live match stats',
 
     adLabel: 'Advertisement',
     notifTitle: 'VAMOOS',
@@ -250,7 +250,7 @@ export const translations = {
     noLineups: 'التشكيلات غير متاحة.',
     autoRefresh: 'تحديث تلقائي',
     loading: 'جارٍ التحميل…',
-    flashscoreStats: 'إحصائيات المباراة المباشرة',
+    liveMatchStats: 'إحصائيات المباراة المباشرة',
 
     adLabel: 'إعلان',
     notifTitle: 'VAMOOS',

@@ -1,5 +1,5 @@
 import { ApiFootballError } from './errors.js';
-import { fetchMatchEvents, fetchMatchStats, periodsToRows, statsToRows, } from './flashscore.js';
+import { fetchMatchEvents, fetchMatchStats, periodsToRows, statsToRows, } from './liveFeed.js';
 import { matchCrowdScore } from './popularity.js';
 const API_BASE = 'https://v3.football.api-sports.io';
 export async function fetchMatchDetail(apiKey, fixtureId) {
@@ -208,13 +208,16 @@ function demoBench(team) {
         grid: null,
     }));
 }
-export async function buildFlashscoreMatchDetail(seed) {
-    const fsId = seed.flashscoreId;
+export async function buildLiveFeedMatchDetail(seed) {
+    const providerId = seed.providerId;
     let statistics = [];
     let events = [];
     let statPeriods = [];
-    if (fsId) {
-        const [stats, fsEvents] = await Promise.all([fetchMatchStats(fsId), fetchMatchEvents(fsId)]);
+    if (providerId) {
+        const [stats, feedEvents] = await Promise.all([
+            fetchMatchStats(providerId),
+            fetchMatchEvents(providerId),
+        ]);
         if (stats) {
             statistics = statsToRows(stats).map((r) => ({
                 type: r.type,
@@ -230,7 +233,7 @@ export async function buildFlashscoreMatchDetail(seed) {
                 })),
             }));
         }
-        events = fsEvents.map((ev) => ({
+        events = feedEvents.map((ev) => ({
             time: ev.minute,
             extra: ev.extra,
             type: ev.type,

@@ -5,7 +5,7 @@ import {
   fetchMatchStats,
   periodsToRows,
   statsToRows,
-} from './flashscore.js';
+} from './liveFeed.js';
 import { matchCrowdScore } from './popularity.js';
 
 const API_BASE = 'https://v3.football.api-sports.io';
@@ -53,7 +53,7 @@ export interface MatchDetail {
   round?: string;
   events: MatchTimelineEvent[];
   statistics: MatchStatRow[];
-  /** Optional half/match breakdowns from Flashscore */
+  /** Optional half/match breakdowns from the live feed */
   statPeriods?: Array<{ name: string; statistics: MatchStatRow[] }>;
   lineups: MatchLineup[];
   mode: 'live' | 'demo' | 'cached';
@@ -322,14 +322,17 @@ function demoBench(team: string): MatchLineupPlayer[] {
   }));
 }
 
-export async function buildFlashscoreMatchDetail(seed: LiveMatch): Promise<MatchDetail> {
-  const fsId = seed.flashscoreId;
+export async function buildLiveFeedMatchDetail(seed: LiveMatch): Promise<MatchDetail> {
+  const providerId = seed.providerId;
   let statistics: MatchStatRow[] = [];
   let events: MatchTimelineEvent[] = [];
   let statPeriods: MatchDetail['statPeriods'] = [];
 
-  if (fsId) {
-    const [stats, fsEvents] = await Promise.all([fetchMatchStats(fsId), fetchMatchEvents(fsId)]);
+  if (providerId) {
+    const [stats, feedEvents] = await Promise.all([
+      fetchMatchStats(providerId),
+      fetchMatchEvents(providerId),
+    ]);
     if (stats) {
       statistics = statsToRows(stats).map((r) => ({
         type: r.type,
@@ -345,7 +348,7 @@ export async function buildFlashscoreMatchDetail(seed: LiveMatch): Promise<Match
         })),
       }));
     }
-    events = fsEvents.map((ev) => ({
+    events = feedEvents.map((ev) => ({
       time: ev.minute,
       extra: ev.extra,
       type: ev.type,

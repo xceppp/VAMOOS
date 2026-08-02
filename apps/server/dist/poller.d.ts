@@ -7,7 +7,7 @@ export interface PollerState {
     rateLimitedUntil: number | null;
     lastOkAt: string | null;
     notice: string | null;
-    source: 'flashscore' | 'api-football' | 'demo';
+    source: 'live' | 'api-football' | 'demo';
     lastPulseAt: string | null;
 }
 export declare function startPoller(hub: WsHub, options: {
@@ -16,8 +16,8 @@ export declare function startPoller(hub: WsHub, options: {
     pulseIntervalMs?: number;
     /** Possession / corners / odds refresh cadence */
     sideIntervalMs?: number;
-    /** Default flashscore — free + fast. api-football as optional override. */
-    source?: 'flashscore' | 'api-football';
+    /** Default live feed — free + fast. api-football as optional override. */
+    source?: 'live' | 'api-football';
 }): {
     state: PollerState;
     findMatch: (id: number) => LiveMatch | undefined;

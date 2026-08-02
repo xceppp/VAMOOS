@@ -1,20 +1,42 @@
-/** Flashscore live feed + match statistics (unofficial feed API). */
+/** Live score feed + match statistics (provider feed API). */
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-const FSIGN = 'SW9D1eZo';
-const FEED_BASE = 'https://global.flashscore.ninja/2/x/feed';
-const IMAGE_BASE = 'https://static.flashscore.com/res/image/data';
+const FEED_SIGN = process.env.LIVE_FEED_SIGN?.trim() || 'SW9D1eZo';
 
-export interface FlashscoreMatch {
+/** Decode baked defaults so provider hostnames are not plaintext in source. */
+function baked(b64: string): string {
+  return Buffer.from(b64, 'base64').toString('utf8');
+}
+
+const FEED_BASE =
+  process.env.LIVE_FEED_BASE?.trim() ||
+  baked('aHR0cHM6Ly9nbG9iYWwuZmxhc2hzY29yZS5uaW5qYS8yL3gvZmVlZA==');
+const IMAGE_BASE =
+  process.env.LIVE_IMAGE_BASE?.trim() ||
+  baked('aHR0cHM6Ly9zdGF0aWMuZmxhc2hzY29yZS5jb20vcmVzL2ltYWdlL2RhdGE=');
+const FEED_REFERER =
+  process.env.LIVE_FEED_REFERER?.trim() ||
+  baked('aHR0cHM6Ly93d3cuZmxhc2hzY29yZS5jb20v');
+
+/** Upstream crest/badge base — used by the media proxy only. */
+export function getLiveImageBase(): string {
+  return IMAGE_BASE;
+}
+
+export function getLiveFeedReferer(): string {
+  return FEED_REFERER;
+}
+
+export interface LiveFeedMatch {
   id: string;
   home: string;
   away: string;
   homeLogo?: string;
   awayLogo?: string;
-  /** Flashscore participant id (JA) */
+  /** Provider participant id (JA) */
   homeTeamId?: string;
-  /** Flashscore participant id (JB) */
+  /** Provider participant id (JB) */
   awayTeamId?: string;
   homeGoals: number;
   awayGoals: number;
@@ -32,7 +54,7 @@ export interface FlashscoreMatch {
   url: string;
 }
 
-export interface FlashscoreLiveOdds {
+export interface LiveFeedOdds {
   home: number | null;
   draw: number | null;
   away: number | null;
@@ -42,12 +64,12 @@ const RECENT_FT_SEC = 25 * 60;
 
 /** Live board rows: in-play matches + recently finished so final scores aren't skipped. */
 export function selectBoardMatches(
-  all: FlashscoreMatch[],
-  /** Flashscore ids to keep briefly after they leave the in-play list (FT flip). */
+  all: LiveFeedMatch[],
+  /** Provider ids to keep briefly after they leave the in-play list (FT flip). */
   retainUntil?: Map<string, number>,
-): FlashscoreMatch[] {
+): LiveFeedMatch[] {
   const now = Math.floor(Date.now() / 1000);
-  const out: FlashscoreMatch[] = [];
+  const out: LiveFeedMatch[] = [];
   const seen = new Set<string>();
 
   for (const m of all) {
@@ -77,27 +99,37 @@ export function selectBoardMatches(
   return out;
 }
 
-/** Flashscore crest / league badge URL from feed image filename. */
-export function flashscoreImageUrl(file: string | null | undefined): string | undefined {
+/**
+ * Crest / league badge URL served via our media proxy (never expose upstream hosts to clients).
+ * Absolute upstream URLs are accepted as-is only when already non-provider absolute paths.
+ */
+export function providerImageUrl(file: string | null | undefined): string | undefined {
   if (!file) return undefined;
-  const name = file.trim();
-  if (!name || name.includes('://')) return name || undefined;
-  return `${IMAGE_BASE}/${name.replace(/^\//, '')}`;
+  const name = file.trim().replace(/^\//, '');
+  if (!name) return undefined;
+  // Already proxied
+  if (name.startsWith('api/media/') || name.startsWith('/api/media/')) {
+    return name.startsWith('/') ? name : `/${name}`;
+  }
+  // Strip accidental absolute upstream URL down to the filename
+  const bare = name.includes('/') ? name.split('/').pop()! : name;
+  if (!bare || bare.includes('://') || bare.includes('..')) return undefined;
+  return `/api/media/crest/${encodeURIComponent(bare)}`;
 }
 
-export interface FlashscoreStatRow {
+export interface FeedStatRow {
   type: string;
   home: string;
   away: string;
   group?: string;
 }
 
-export interface FlashscoreStatPeriod {
+export interface FeedStatPeriod {
   name: string;
-  rows: FlashscoreStatRow[];
+  rows: FeedStatRow[];
 }
 
-export interface FlashscoreStats {
+export interface FeedStats {
   possessionHome: number | null;
   possessionAway: number | null;
   shotsOnHome: number | null;
@@ -110,9 +142,9 @@ export interface FlashscoreStats {
   cornersAway: number | null;
   xgHome: number | null;
   xgAway: number | null;
-  /** Full Match-period rows (all labels Flashscore sent). */
-  rows: FlashscoreStatRow[];
-  periods: FlashscoreStatPeriod[];
+  /** Full Match-period rows (all labels the feed sent). */
+  rows: FeedStatRow[];
+  periods: FeedStatPeriod[];
   raw: Record<string, { home: string; away: string }>;
 }
 
@@ -120,8 +152,8 @@ function headers(): Record<string, string> {
   return {
     'user-agent': UA,
     accept: '*/*',
-    referer: 'https://www.flashscore.com/',
-    'x-fsign': FSIGN,
+    referer: FEED_REFERER,
+    'x-fsign': FEED_SIGN,
   };
 }
 
@@ -146,7 +178,7 @@ function clamp(n: number, lo: number, hi: number): number {
 }
 
 /**
- * Decode Flashscore stage → clock.
+ * Decode provider stage → clock.
  * AO is the start of the *current period* (1H / 2H / ET), not kickoff.
  * Important: stage 38 is first half — NOT extra time.
  */
@@ -154,7 +186,7 @@ export function estimateMinute(fields: {
   AB?: string;
   AC?: string;
   AO?: string;
-}): { minute: number | null; status: FlashscoreMatch['status'] } {
+}): { minute: number | null; status: LiveFeedMatch['status'] } {
   const ab = Number(fields.AB ?? 0);
   const ac = Number(fields.AC ?? 0);
   const ao = numOrNull(fields.AO);
@@ -187,7 +219,7 @@ export function estimateMinute(fields: {
     return { minute: 120, status: 'ET' };
   }
 
-  // First half — Flashscore uses 38 (and sometimes 6/7) for 1H; AO = 1H start
+  // First half — feed uses 38 (and sometimes 6/7) for 1H; AO = 1H start
   if (ab === 2 || ac === 38 || ac === 6 || ac === 7) {
     const m = periodElapsed != null ? clamp(periodElapsed, 1, 45 + 15) : 1;
     return { minute: m, status: 'LIVE' };
@@ -200,8 +232,8 @@ export function estimateMinute(fields: {
   return { minute: null, status: 'LIVE' };
 }
 
-export function parseFootballFeed(raw: string): FlashscoreMatch[] {
-  const out: FlashscoreMatch[] = [];
+export function parseFootballFeed(raw: string): LiveFeedMatch[] {
+  const out: LiveFeedMatch[] = [];
   let league = 'Unknown';
   let leagueLogo: string | undefined;
   for (const part of raw.split('~')) {
@@ -209,7 +241,7 @@ export function parseFootballFeed(raw: string): FlashscoreMatch[] {
     const f = parseTokens(part);
     if (f.ZA) {
       league = f.ZA;
-      leagueLogo = flashscoreImageUrl(f.OAJ);
+      leagueLogo = providerImageUrl(f.OAJ);
     }
     if (!f.AA) continue;
     const { minute, status } = estimateMinute(f);
@@ -221,8 +253,8 @@ export function parseFootballFeed(raw: string): FlashscoreMatch[] {
       id: f.AA,
       home: f.AE || f.CX || 'Home',
       away: f.AF || 'Away',
-      homeLogo: flashscoreImageUrl(f.OA),
-      awayLogo: flashscoreImageUrl(f.OB),
+      homeLogo: providerImageUrl(f.OA),
+      awayLogo: providerImageUrl(f.OB),
       homeTeamId: f.JA || undefined,
       awayTeamId: f.JB || undefined,
       homeGoals: numOrNull(f.AG) ?? 0,
@@ -237,16 +269,16 @@ export function parseFootballFeed(raw: string): FlashscoreMatch[] {
       kickoffTs: numOrNull(f.AD),
       homeSlug,
       awaySlug,
-      url: `https://www.flashscore.com/match/football/${slug}/${f.AA}/#/match-summary/match-statistics/0`,
+      url: `/match/${providerIdToNumber(f.AA)}`,
     });
   }
   return out;
 }
 
-let feedCache: { at: number; matches: FlashscoreMatch[] } | null = null;
-const dayFeedCache = new Map<number, { at: number; matches: FlashscoreMatch[] }>();
+let feedCache: { at: number; matches: LiveFeedMatch[] } | null = null;
+const dayFeedCache = new Map<number, { at: number; matches: LiveFeedMatch[] }>();
 
-export async function fetchFootballFeed(force = false): Promise<FlashscoreMatch[]> {
+export async function fetchFootballFeed(force = false): Promise<LiveFeedMatch[]> {
   if (!force && feedCache && Date.now() - feedCache.at < 1_200) {
     return feedCache.matches;
   }
@@ -255,11 +287,11 @@ export async function fetchFootballFeed(force = false): Promise<FlashscoreMatch[
   return matches;
 }
 
-/** Flashscore day board: 0 = today, 1 = tomorrow, … */
+/** Day board: 0 = today, 1 = tomorrow, … */
 export async function fetchFootballFeedDay(
   dayOffset: number,
   force = false,
-): Promise<FlashscoreMatch[]> {
+): Promise<LiveFeedMatch[]> {
   const day = Math.max(-1, Math.min(7, Math.trunc(dayOffset)));
   const cached = dayFeedCache.get(day);
   const ttl = day === 0 ? 1_200 : 45_000;
@@ -268,14 +300,14 @@ export async function fetchFootballFeedDay(
   }
   const url = `${FEED_BASE}/f_1_${day}_3_en_1?t=${Date.now()}`;
   const res = await fetch(url, { headers: headers() });
-  if (!res.ok) throw new Error(`Flashscore feed day ${day} HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Live feed day ${day} HTTP ${res.status}`);
   const matches = parseFootballFeed(await res.text());
   dayFeedCache.set(day, { at: Date.now(), matches });
   if (day === 0) feedCache = { at: Date.now(), matches };
   return matches;
 }
 
-export function selectUpcomingMatches(all: FlashscoreMatch[]): FlashscoreMatch[] {
+export function selectUpcomingMatches(all: LiveFeedMatch[]): LiveFeedMatch[] {
   const now = Math.floor(Date.now() / 1000) - 5 * 60;
   return all
     .filter((m) => m.status === 'NS')
@@ -283,7 +315,7 @@ export function selectUpcomingMatches(all: FlashscoreMatch[]): FlashscoreMatch[]
     .sort((a, b) => (a.kickoffTs ?? 0) - (b.kickoffTs ?? 0));
 }
 
-export async function fetchFlashscoreUpcomingMatches(
+export async function fetchUpcomingFeedMatches(
   scorePopularity: (input: {
     league: string;
     homeName: string;
@@ -319,7 +351,7 @@ export interface ScorePulse {
   periodStartTs: number | null;
 }
 
-/** Tiny Flashscore score endpoint — much faster than reloading the full board. */
+/** Tiny per-match score endpoint — much faster than reloading the full board. */
 export function parseScorePulse(raw: string): ScorePulse | null {
   const f = parseTokens(raw.split('~')[0] ?? raw);
   if (f.DE == null || f.DF == null) return null;
@@ -355,8 +387,8 @@ export function applyScorePulse(
     AC: String(pulse.stageCode),
     AO: pulse.periodStartTs != null ? String(pulse.periodStartTs) : undefined,
   });
-  const stub: FlashscoreMatch = {
-    id: match.flashscoreId ?? String(match.id),
+  const stub: LiveFeedMatch = {
+    id: match.providerId ?? String(match.id),
     home: match.home.name,
     away: match.away.name,
     homeGoals: pulse.homeGoals,
@@ -383,24 +415,24 @@ export function applyScorePulse(
   };
 }
 
-/** Find one match in the (cached) feed by Flashscore id or hashed app id. */
-export async function findFlashscoreMatch(
-  opts: { flashscoreId?: string; liveId?: number },
-): Promise<FlashscoreMatch | undefined> {
+/** Find one match in the (cached) feed by provider id or hashed app id. */
+export async function findFeedMatch(
+  opts: { providerId?: string; liveId?: number },
+): Promise<LiveFeedMatch | undefined> {
   const all = await fetchFootballFeed();
-  if (opts.flashscoreId) {
-    const hit = all.find((m) => m.id === opts.flashscoreId);
+  if (opts.providerId) {
+    const hit = all.find((m) => m.id === opts.providerId);
     if (hit) return hit;
   }
   if (opts.liveId != null) {
-    return all.find((m) => flashscoreIdToNumber(m.id) === opts.liveId);
+    return all.find((m) => providerIdToNumber(m.id) === opts.liveId);
   }
   return undefined;
 }
 
-export function parseStatsFeed(raw: string): FlashscoreStats {
-  const periods: FlashscoreStatPeriod[] = [];
-  let period: FlashscoreStatPeriod | null = null;
+export function parseStatsFeed(raw: string): FeedStats {
+  const periods: FeedStatPeriod[] = [];
+  let period: FeedStatPeriod | null = null;
   let group = 'Top stats';
 
   const ensurePeriod = (name: string) => {
@@ -428,7 +460,7 @@ export function parseStatsFeed(raw: string): FlashscoreStats {
     }
     if (f.SG && f.SH != null) {
       const key = f.SG.toLowerCase();
-      // Keep first occurrence in this period (Flashscore repeats labels across groups)
+      // Keep first occurrence in this period (feed repeats labels across groups)
       if (!current.rows.some((r) => r.type.toLowerCase() === key)) {
         current.rows.push({
           type: f.SG,
@@ -489,7 +521,7 @@ export function parseStatsFeed(raw: string): FlashscoreStats {
   };
 }
 
-export async function fetchMatchStats(matchId: string): Promise<FlashscoreStats | null> {
+export async function fetchMatchStats(matchId: string): Promise<FeedStats | null> {
   try {
     const res = await fetch(`${FEED_BASE}/df_st_1_${matchId}`, { headers: headers() });
     if (!res.ok) return null;
@@ -508,14 +540,14 @@ function parseOddValue(v: unknown): number | null {
 }
 
 /**
- * Live 1X2 odds from Flashscore's odds GraphQL (HOME_DRAW_AWAY / FULL_TIME).
+ * Live 1X2 odds from the provider odds GraphQL (HOME_DRAW_AWAY / FULL_TIME).
  * Maps selections via participant ids when available.
  */
 export async function fetchMatchLiveOdds(
   matchId: string,
   homeTeamId?: string,
   awayTeamId?: string,
-): Promise<FlashscoreLiveOdds | null> {
+): Promise<LiveFeedOdds | null> {
   const url =
     `https://global.ds.lsapp.eu/odds/pq_graphql?_hash=oce` +
     `&eventId=${encodeURIComponent(matchId)}&projectId=2&geoIpCode=US&geoIpSubdivisionCode=NY`;
@@ -524,7 +556,7 @@ export async function fetchMatchLiveOdds(
       headers: {
         'user-agent': UA,
         accept: 'application/json',
-        referer: 'https://www.flashscore.com/',
+        referer: FEED_REFERER,
       },
     });
     if (!res.ok) return null;
@@ -591,7 +623,7 @@ export async function fetchMatchLiveOdds(
       away = byParticipant.get(awayTeamId) ?? null;
     }
 
-    // Fallback: Flashscore often sends [home, away, draw]
+    // Fallback: provider often sends [home, away, draw]
     if (home == null || away == null || draw == null) {
       const ordered = items.map((i) => parseOddValue(i.value));
       const nullIdx = items.findIndex((i) => i.eventParticipantId == null || i.eventParticipantId === '');
@@ -610,7 +642,7 @@ export async function fetchMatchLiveOdds(
   }
 }
 
-export interface FlashscoreEvent {
+export interface FeedEvent {
   minute: number | null;
   extra: number | null;
   type: string;
@@ -620,9 +652,9 @@ export interface FlashscoreEvent {
   assist: string | null;
 }
 
-/** Parse Flashscore summary/incidents feed into timeline events. */
-export function parseEventsFeed(raw: string): FlashscoreEvent[] {
-  const out: FlashscoreEvent[] = [];
+/** Parse summary/incidents feed into timeline events. */
+export function parseEventsFeed(raw: string): FeedEvent[] {
+  const out: FeedEvent[] = [];
 
   // Events can share a chunk; split on each incident id marker.
   const chunks = raw.split(/~?(?=III÷)/).filter((c) => c.includes('III÷'));
@@ -698,7 +730,7 @@ export function parseEventsFeed(raw: string): FlashscoreEvent[] {
   return out;
 }
 
-export async function fetchMatchEvents(matchId: string): Promise<FlashscoreEvent[]> {
+export async function fetchMatchEvents(matchId: string): Promise<FeedEvent[]> {
   try {
     const res = await fetch(`${FEED_BASE}/df_sui_1_${matchId}`, { headers: headers() });
     if (!res.ok) return [];
@@ -711,7 +743,7 @@ export async function fetchMatchEvents(matchId: string): Promise<FlashscoreEvent
 }
 
 /** Ordered rows for the detail UI — full Match period, preferred order first. */
-export function statsToRows(stats: FlashscoreStats): Array<{ type: string; home: string | number; away: string | number }> {
+export function statsToRows(stats: FeedStats): Array<{ type: string; home: string | number; away: string | number }> {
   const preferred = [
     'Expected goals (xG)',
     'Ball possession',
@@ -774,7 +806,7 @@ export function statsToRows(stats: FlashscoreStats): Array<{ type: string; home:
 }
 
 export function periodsToRows(
-  stats: FlashscoreStats,
+  stats: FeedStats,
 ): Array<{ name: string; statistics: Array<{ type: string; home: string | number; away: string | number }> }> {
   return stats.periods.map((p) => ({
     name: p.name,
@@ -796,10 +828,10 @@ async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T) => P
 }
 
 export async function fetchStatsForMatches(
-  matches: FlashscoreMatch[],
+  matches: LiveFeedMatch[],
   concurrency = 6,
-): Promise<Map<string, FlashscoreStats>> {
-  const map = new Map<string, FlashscoreStats>();
+): Promise<Map<string, FeedStats>> {
+  const map = new Map<string, FeedStats>();
   await mapPool(matches, concurrency, async (m) => {
     const stats = await fetchMatchStats(m.id);
     if (stats) map.set(m.id, stats);
@@ -808,8 +840,8 @@ export async function fetchStatsForMatches(
   return map;
 }
 
-/** Stable numeric id from Flashscore alphanumeric id (for favorites / routes). */
-export function flashscoreIdToNumber(id: string): number {
+/** Stable numeric id from provider alphanumeric id (for favorites / routes). */
+export function providerIdToNumber(id: string): number {
   let h = 2166136261;
   for (let i = 0; i < id.length; i++) {
     h ^= id.charCodeAt(i);
@@ -818,7 +850,7 @@ export function flashscoreIdToNumber(id: string): number {
   return ((h >>> 0) % 1_999_999_999) + 1;
 }
 
-function toMatchStatus(m: FlashscoreMatch): string {
+function toMatchStatus(m: LiveFeedMatch): string {
   if (m.status === 'HT' || m.stageCode === 12) return 'HT';
   if (m.status === 'FT') return 'FT';
   if (m.status === 'NS') return 'NS';
@@ -826,33 +858,33 @@ function toMatchStatus(m: FlashscoreMatch): string {
     return 'ET';
   }
   if (m.stageCode === 13) return '2H';
-  // 38 / 6 / 7 = first half on Flashscore
+  // 38 / 6 / 7 = first half on the live feed
   if (m.stageCode === 38 || m.stageCode === 6 || m.stageCode === 7) return '1H';
   if (m.minute != null && m.minute > 45) return '2H';
   if (m.minute != null) return '1H';
   return 'LIVE';
 }
 
-export function toLiveMatch(m: FlashscoreMatch, popularity: number): import('./types.js').LiveMatch {
+export function toLiveMatch(m: LiveFeedMatch, popularity: number): import('./types.js').LiveMatch {
   const [country, leagueName] = m.league.includes(':')
     ? m.league.split(':').map((s) => s.trim())
     : [undefined, m.league];
   return {
-    id: flashscoreIdToNumber(m.id),
-    flashscoreId: m.id,
-    homeFsTeamId: m.homeTeamId,
-    awayFsTeamId: m.awayTeamId,
+    id: providerIdToNumber(m.id),
+    providerId: m.id,
+    homeProviderTeamId: m.homeTeamId,
+    awayProviderTeamId: m.awayTeamId,
     league: leagueName || m.league,
     leagueLogo: m.leagueLogo,
     country,
     popularity,
     home: {
-      id: flashscoreIdToNumber(`h:${m.id}`),
+      id: providerIdToNumber(`h:${m.id}`),
       name: m.home,
       logo: m.homeLogo,
     },
     away: {
-      id: flashscoreIdToNumber(`a:${m.id}`),
+      id: providerIdToNumber(`a:${m.id}`),
       name: m.away,
       logo: m.awayLogo,
     },
@@ -870,8 +902,8 @@ export function toLiveMatch(m: FlashscoreMatch, popularity: number): import('./t
   };
 }
 
-/** Live board from Flashscore (in-play + recently finished). */
-export async function fetchFlashscoreLiveMatches(
+/** Live board from feed (in-play + recently finished). */
+export async function fetchLiveFeedMatches(
   scorePopularity: (input: {
     league: string;
     homeName: string;

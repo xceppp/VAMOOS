@@ -243,7 +243,7 @@ export function analyzeGoalPotential(input: AiscoreParsed): GoalPotentialResult 
     call = 'LEAN NAH';
     market = 'Insufficient stats';
     confidence = 0.35;
-    reasons.push('Thin stats — waiting on Flashscore numbers.');
+    reasons.push('Thin stats — waiting on live feed numbers.');
   } else if (minute >= 75) {
     // Late window: calibrate to shorter horizon
     if (pNextGoal >= 0.4 && intensity >= 0.32 && isClose) {

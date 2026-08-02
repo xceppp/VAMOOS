@@ -5,10 +5,10 @@ import { existsSync } from 'fs';
 import { createServer } from 'http';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { buildDemoMatchDetail, buildFlashscoreMatchDetail, fetchMatchDetail, } from './matchDetail.js';
+import { buildDemoMatchDetail, buildLiveFeedMatchDetail, fetchMatchDetail, } from './matchDetail.js';
 import { buildAiscoreAnalysis } from './predictions.js';
 import { scanLateGoalPotential } from './lateGoalScan.js';
-import { fetchFlashscoreUpcomingMatches, findFlashscoreMatch, toLiveMatch, } from './flashscore.js';
+import { fetchUpcomingFeedMatches, findFeedMatch, getLiveFeedReferer, getLiveImageBase, toLiveMatch, } from './liveFeed.js';
 import { matchCrowdScore } from './popularity.js';
 import { startPoller } from './poller.js';
 import { createWsHub } from './ws.js';
@@ -17,8 +17,14 @@ dotenv.config({ path: resolve(__dirname, '../.env') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
-const LIVE_SOURCE = (process.env.LIVE_SOURCE?.trim() || 'flashscore');
-const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? (LIVE_SOURCE === 'flashscore' ? 1_500 : 60_000));
+function resolveLiveSource(raw) {
+    const v = (raw?.trim() || 'live').toLowerCase();
+    if (v === 'api-football')
+        return 'api-football';
+    return 'live';
+}
+const LIVE_SOURCE = resolveLiveSource(process.env.LIVE_SOURCE);
+const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? (LIVE_SOURCE === 'live' ? 1_500 : 60_000));
 const PULSE_INTERVAL_MS = Number(process.env.PULSE_INTERVAL_MS ?? 700);
 const SIDE_INTERVAL_MS = Number(process.env.SIDE_INTERVAL_MS ?? 8_000);
 const API_KEY = process.env.API_FOOTBALL_KEY?.trim() || undefined;
@@ -53,6 +59,35 @@ const poller = startPoller(hub, {
     sideIntervalMs: SIDE_INTERVAL_MS,
     source: LIVE_SOURCE,
 });
+/** Proxy provider crests so clients never see upstream image hosts. */
+app.get('/api/media/crest/:file', async (req, res) => {
+    const file = String(req.params.file || '').trim();
+    if (!file || file.includes('..') || file.includes('/') || file.includes('\\')) {
+        res.status(400).end();
+        return;
+    }
+    try {
+        const upstream = `${getLiveImageBase()}/${file}`;
+        const upstreamRes = await fetch(upstream, {
+            headers: {
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                referer: getLiveFeedReferer(),
+            },
+        });
+        if (!upstreamRes.ok) {
+            res.status(upstreamRes.status === 404 ? 404 : 502).end();
+            return;
+        }
+        const type = upstreamRes.headers.get('content-type') || 'image/png';
+        res.setHeader('Content-Type', type);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        const buf = Buffer.from(await upstreamRes.arrayBuffer());
+        res.send(buf);
+    }
+    catch {
+        res.status(502).end();
+    }
+});
 app.get('/health', (_req, res) => {
     res.json({
         ok: true,
@@ -83,7 +118,7 @@ app.get('/api/matches', (_req, res) => {
 });
 const fixturesCache = new Map();
 const FIXTURES_CACHE_MS = 40_000;
-/** Scheduled matches for today + coming days (Flashscore day feeds). */
+/** Scheduled matches for today + coming days (live day feeds). */
 app.get('/api/fixtures', async (req, res) => {
     const daysRaw = Number(req.query.days ?? 4);
     const days = Number.isFinite(daysRaw) ? Math.max(1, Math.min(7, Math.trunc(daysRaw))) : 4;
@@ -93,13 +128,13 @@ app.get('/api/fixtures', async (req, res) => {
         return;
     }
     try {
-        const data = await fetchFlashscoreUpcomingMatches((input) => matchCrowdScore({
+        const data = await fetchUpcomingFeedMatches((input) => matchCrowdScore({
             league: input.league,
             homeName: input.homeName,
             awayName: input.awayName,
         }), days);
         const payload = {
-            source: 'flashscore',
+            source: 'live',
             ...data,
         };
         fixturesCache.set(days, { at: Date.now(), data: payload });
@@ -125,10 +160,10 @@ app.get('/api/matches/:id', async (req, res) => {
         return;
     }
     let seed = poller.findMatch(id);
-    // Always refresh score/status from the Flashscore feed (seed alone can be stale after FT).
+    // Always refresh score/status from the live feed (seed alone can be stale after FT).
     try {
-        const hit = await findFlashscoreMatch({
-            flashscoreId: seed?.flashscoreId,
+        const hit = await findFeedMatch({
+            providerId: seed?.providerId,
             liveId: id,
         });
         if (hit) {
@@ -141,7 +176,7 @@ app.get('/api/matches/:id', async (req, res) => {
         }
     }
     catch (err) {
-        console.warn('[match-detail] flashscore resolve failed', err);
+        console.warn('[match-detail] live feed resolve failed', err);
     }
     const cached = detailCache.get(id);
     if (cached && Date.now() - cached.at < DETAIL_CACHE_MS) {
@@ -153,16 +188,16 @@ app.get('/api/matches/:id', async (req, res) => {
         res.json(cached.data);
         return;
     }
-    // Flashscore-sourced matches — pull live stats + timeline from FS
-    if (seed?.flashscoreId) {
+    // Live-feed-sourced matches — pull live stats + timeline
+    if (seed?.providerId) {
         try {
-            const detail = await buildFlashscoreMatchDetail(seed);
+            const detail = await buildLiveFeedMatchDetail(seed);
             detailCache.set(id, { at: Date.now(), data: detail });
             res.json(detail);
             return;
         }
         catch (err) {
-            console.error('[match-detail-fs]', err);
+            console.error('[match-detail-feed]', err);
             res.json({
                 match: seed,
                 events: [],
@@ -258,7 +293,7 @@ app.get('/api/predictions/late-goals', async (req, res) => {
     catch (err) {
         console.error('[late-goals]', err);
         res.status(502).json({
-            error: err instanceof Error ? err.message : 'Flashscore scan failed',
+            error: err instanceof Error ? err.message : 'Scan failed',
         });
     }
 });

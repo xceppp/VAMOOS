@@ -11,6 +11,6 @@ services:
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
       - key: LIVE_SOURCE
-        value: flashscore
+        value: live
       - key: HOST
         value: 0.0.0.0

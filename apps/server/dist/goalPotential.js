@@ -179,7 +179,7 @@ export function analyzeGoalPotential(input) {
         call = 'LEAN NAH';
         market = 'Insufficient stats';
         confidence = 0.35;
-        reasons.push('Thin stats — waiting on Flashscore numbers.');
+        reasons.push('Thin stats — waiting on live feed numbers.');
     }
     else if (minute >= 75) {
         // Late window: calibrate to shorter horizon

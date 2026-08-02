@@ -1,4 +1,4 @@
-/** Scan Flashscore live matches for last-15-min goal + corner potential. */
+/** Scan live feed matches for last-15-min goal + corner potential. */
 import { type GoalPotentialResult, type RiskLevel } from './goalPotential.js';
 export interface LateGoalPick {
     matchId: string;
@@ -35,7 +35,7 @@ export interface LateGoalPick {
 }
 export interface LateGoalScanResult {
     at: string;
-    source: 'flashscore';
+    source: 'live';
     liveTotal: number;
     lateWindowTotal: number;
     scannedWithStats: number;

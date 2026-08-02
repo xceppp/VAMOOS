@@ -197,7 +197,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
             </div>
 
             <p className="detail-hero__info">
-              {[data?.venue, data?.city].filter(Boolean).join(', ') || t('flashscoreStats')}
+              {[data?.venue, data?.city].filter(Boolean).join(', ') || t('liveMatchStats')}
               {data?.referee ? ` · ${data.referee}` : ''}
               {loading ? ` · ${t('loading')}` : ` · ${t('autoRefresh')}`}
             </p>

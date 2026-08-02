@@ -1,12 +1,27 @@
-/** Flashscore live feed + match statistics (unofficial feed API). */
+/** Live score feed + match statistics (provider feed API). */
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-const FSIGN = 'SW9D1eZo';
-const FEED_BASE = 'https://global.flashscore.ninja/2/x/feed';
-const IMAGE_BASE = 'https://static.flashscore.com/res/image/data';
+const FEED_SIGN = process.env.LIVE_FEED_SIGN?.trim() || 'SW9D1eZo';
+/** Decode baked defaults so provider hostnames are not plaintext in source. */
+function baked(b64) {
+    return Buffer.from(b64, 'base64').toString('utf8');
+}
+const FEED_BASE = process.env.LIVE_FEED_BASE?.trim() ||
+    baked('aHR0cHM6Ly9nbG9iYWwuZmxhc2hzY29yZS5uaW5qYS8yL3gvZmVlZA==');
+const IMAGE_BASE = process.env.LIVE_IMAGE_BASE?.trim() ||
+    baked('aHR0cHM6Ly9zdGF0aWMuZmxhc2hzY29yZS5jb20vcmVzL2ltYWdlL2RhdGE=');
+const FEED_REFERER = process.env.LIVE_FEED_REFERER?.trim() ||
+    baked('aHR0cHM6Ly93d3cuZmxhc2hzY29yZS5jb20v');
+/** Upstream crest/badge base — used by the media proxy only. */
+export function getLiveImageBase() {
+    return IMAGE_BASE;
+}
+export function getLiveFeedReferer() {
+    return FEED_REFERER;
+}
 const RECENT_FT_SEC = 25 * 60;
 /** Live board rows: in-play matches + recently finished so final scores aren't skipped. */
 export function selectBoardMatches(all, 
-/** Flashscore ids to keep briefly after they leave the in-play list (FT flip). */
+/** Provider ids to keep briefly after they leave the in-play list (FT flip). */
 retainUntil) {
     const now = Math.floor(Date.now() / 1000);
     const out = [];
@@ -38,21 +53,32 @@ retainUntil) {
     }
     return out;
 }
-/** Flashscore crest / league badge URL from feed image filename. */
-export function flashscoreImageUrl(file) {
+/**
+ * Crest / league badge URL served via our media proxy (never expose upstream hosts to clients).
+ * Absolute upstream URLs are accepted as-is only when already non-provider absolute paths.
+ */
+export function providerImageUrl(file) {
     if (!file)
         return undefined;
-    const name = file.trim();
-    if (!name || name.includes('://'))
-        return name || undefined;
-    return `${IMAGE_BASE}/${name.replace(/^\//, '')}`;
+    const name = file.trim().replace(/^\//, '');
+    if (!name)
+        return undefined;
+    // Already proxied
+    if (name.startsWith('api/media/') || name.startsWith('/api/media/')) {
+        return name.startsWith('/') ? name : `/${name}`;
+    }
+    // Strip accidental absolute upstream URL down to the filename
+    const bare = name.includes('/') ? name.split('/').pop() : name;
+    if (!bare || bare.includes('://') || bare.includes('..'))
+        return undefined;
+    return `/api/media/crest/${encodeURIComponent(bare)}`;
 }
 function headers() {
     return {
         'user-agent': UA,
         accept: '*/*',
-        referer: 'https://www.flashscore.com/',
-        'x-fsign': FSIGN,
+        referer: FEED_REFERER,
+        'x-fsign': FEED_SIGN,
     };
 }
 function parseTokens(chunk) {
@@ -75,7 +101,7 @@ function clamp(n, lo, hi) {
     return Math.max(lo, Math.min(hi, n));
 }
 /**
- * Decode Flashscore stage → clock.
+ * Decode provider stage → clock.
  * AO is the start of the *current period* (1H / 2H / ET), not kickoff.
  * Important: stage 38 is first half — NOT extra time.
  */
@@ -110,7 +136,7 @@ export function estimateMinute(fields) {
     if (ac === 16 || ac === 17) {
         return { minute: 120, status: 'ET' };
     }
-    // First half — Flashscore uses 38 (and sometimes 6/7) for 1H; AO = 1H start
+    // First half — feed uses 38 (and sometimes 6/7) for 1H; AO = 1H start
     if (ab === 2 || ac === 38 || ac === 6 || ac === 7) {
         const m = periodElapsed != null ? clamp(periodElapsed, 1, 45 + 15) : 1;
         return { minute: m, status: 'LIVE' };
@@ -131,7 +157,7 @@ export function parseFootballFeed(raw) {
         const f = parseTokens(part);
         if (f.ZA) {
             league = f.ZA;
-            leagueLogo = flashscoreImageUrl(f.OAJ);
+            leagueLogo = providerImageUrl(f.OAJ);
         }
         if (!f.AA)
             continue;
@@ -143,8 +169,8 @@ export function parseFootballFeed(raw) {
             id: f.AA,
             home: f.AE || f.CX || 'Home',
             away: f.AF || 'Away',
-            homeLogo: flashscoreImageUrl(f.OA),
-            awayLogo: flashscoreImageUrl(f.OB),
+            homeLogo: providerImageUrl(f.OA),
+            awayLogo: providerImageUrl(f.OB),
             homeTeamId: f.JA || undefined,
             awayTeamId: f.JB || undefined,
             homeGoals: numOrNull(f.AG) ?? 0,
@@ -159,7 +185,7 @@ export function parseFootballFeed(raw) {
             kickoffTs: numOrNull(f.AD),
             homeSlug,
             awaySlug,
-            url: `https://www.flashscore.com/match/football/${slug}/${f.AA}/#/match-summary/match-statistics/0`,
+            url: `/match/${providerIdToNumber(f.AA)}`,
         });
     }
     return out;
@@ -174,7 +200,7 @@ export async function fetchFootballFeed(force = false) {
     feedCache = { at: Date.now(), matches };
     return matches;
 }
-/** Flashscore day board: 0 = today, 1 = tomorrow, … */
+/** Day board: 0 = today, 1 = tomorrow, … */
 export async function fetchFootballFeedDay(dayOffset, force = false) {
     const day = Math.max(-1, Math.min(7, Math.trunc(dayOffset)));
     const cached = dayFeedCache.get(day);
@@ -185,7 +211,7 @@ export async function fetchFootballFeedDay(dayOffset, force = false) {
     const url = `${FEED_BASE}/f_1_${day}_3_en_1?t=${Date.now()}`;
     const res = await fetch(url, { headers: headers() });
     if (!res.ok)
-        throw new Error(`Flashscore feed day ${day} HTTP ${res.status}`);
+        throw new Error(`Live feed day ${day} HTTP ${res.status}`);
     const matches = parseFootballFeed(await res.text());
     dayFeedCache.set(day, { at: Date.now(), matches });
     if (day === 0)
@@ -199,7 +225,7 @@ export function selectUpcomingMatches(all) {
         .filter((m) => m.kickoffTs == null || m.kickoffTs >= now)
         .sort((a, b) => (a.kickoffTs ?? 0) - (b.kickoffTs ?? 0));
 }
-export async function fetchFlashscoreUpcomingMatches(scorePopularity, days = 3) {
+export async function fetchUpcomingFeedMatches(scorePopularity, days = 3) {
     const count = Math.max(1, Math.min(7, Math.trunc(days)));
     const offsets = Array.from({ length: count }, (_, i) => i);
     const dayResults = await Promise.all(offsets.map(async (dayOffset) => {
@@ -209,7 +235,7 @@ export async function fetchFlashscoreUpcomingMatches(scorePopularity, days = 3) 
     }));
     return { days: dayResults, at: new Date().toISOString() };
 }
-/** Tiny Flashscore score endpoint — much faster than reloading the full board. */
+/** Tiny per-match score endpoint — much faster than reloading the full board. */
 export function parseScorePulse(raw) {
     const f = parseTokens(raw.split('~')[0] ?? raw);
     if (f.DE == null || f.DF == null)
@@ -245,7 +271,7 @@ export function applyScorePulse(match, pulse) {
         AO: pulse.periodStartTs != null ? String(pulse.periodStartTs) : undefined,
     });
     const stub = {
-        id: match.flashscoreId ?? String(match.id),
+        id: match.providerId ?? String(match.id),
         home: match.home.name,
         away: match.away.name,
         homeGoals: pulse.homeGoals,
@@ -271,16 +297,16 @@ export function applyScorePulse(match, pulse) {
         elapsed: status === 'NS' || status === 'FT' || status === 'HT' ? null : minute,
     };
 }
-/** Find one match in the (cached) feed by Flashscore id or hashed app id. */
-export async function findFlashscoreMatch(opts) {
+/** Find one match in the (cached) feed by provider id or hashed app id. */
+export async function findFeedMatch(opts) {
     const all = await fetchFootballFeed();
-    if (opts.flashscoreId) {
-        const hit = all.find((m) => m.id === opts.flashscoreId);
+    if (opts.providerId) {
+        const hit = all.find((m) => m.id === opts.providerId);
         if (hit)
             return hit;
     }
     if (opts.liveId != null) {
-        return all.find((m) => flashscoreIdToNumber(m.id) === opts.liveId);
+        return all.find((m) => providerIdToNumber(m.id) === opts.liveId);
     }
     return undefined;
 }
@@ -313,7 +339,7 @@ export function parseStatsFeed(raw) {
         }
         if (f.SG && f.SH != null) {
             const key = f.SG.toLowerCase();
-            // Keep first occurrence in this period (Flashscore repeats labels across groups)
+            // Keep first occurrence in this period (feed repeats labels across groups)
             if (!current.rows.some((r) => r.type.toLowerCase() === key)) {
                 current.rows.push({
                     type: f.SG,
@@ -390,7 +416,7 @@ function parseOddValue(v) {
     return Number.isFinite(n) && n > 1 ? Number(n.toFixed(2)) : null;
 }
 /**
- * Live 1X2 odds from Flashscore's odds GraphQL (HOME_DRAW_AWAY / FULL_TIME).
+ * Live 1X2 odds from the provider odds GraphQL (HOME_DRAW_AWAY / FULL_TIME).
  * Maps selections via participant ids when available.
  */
 export async function fetchMatchLiveOdds(matchId, homeTeamId, awayTeamId) {
@@ -401,7 +427,7 @@ export async function fetchMatchLiveOdds(matchId, homeTeamId, awayTeamId) {
             headers: {
                 'user-agent': UA,
                 accept: 'application/json',
-                referer: 'https://www.flashscore.com/',
+                referer: FEED_REFERER,
             },
         });
         if (!res.ok)
@@ -445,7 +471,7 @@ export async function fetchMatchLiveOdds(matchId, homeTeamId, awayTeamId) {
         if (awayTeamId && byParticipant.has(awayTeamId)) {
             away = byParticipant.get(awayTeamId) ?? null;
         }
-        // Fallback: Flashscore often sends [home, away, draw]
+        // Fallback: provider often sends [home, away, draw]
         if (home == null || away == null || draw == null) {
             const ordered = items.map((i) => parseOddValue(i.value));
             const nullIdx = items.findIndex((i) => i.eventParticipantId == null || i.eventParticipantId === '');
@@ -467,7 +493,7 @@ export async function fetchMatchLiveOdds(matchId, homeTeamId, awayTeamId) {
         return null;
     }
 }
-/** Parse Flashscore summary/incidents feed into timeline events. */
+/** Parse summary/incidents feed into timeline events. */
 export function parseEventsFeed(raw) {
     const out = [];
     // Events can share a chunk; split on each incident id marker.
@@ -648,8 +674,8 @@ export async function fetchStatsForMatches(matches, concurrency = 6) {
     });
     return map;
 }
-/** Stable numeric id from Flashscore alphanumeric id (for favorites / routes). */
-export function flashscoreIdToNumber(id) {
+/** Stable numeric id from provider alphanumeric id (for favorites / routes). */
+export function providerIdToNumber(id) {
     let h = 2166136261;
     for (let i = 0; i < id.length; i++) {
         h ^= id.charCodeAt(i);
@@ -669,7 +695,7 @@ function toMatchStatus(m) {
     }
     if (m.stageCode === 13)
         return '2H';
-    // 38 / 6 / 7 = first half on Flashscore
+    // 38 / 6 / 7 = first half on the live feed
     if (m.stageCode === 38 || m.stageCode === 6 || m.stageCode === 7)
         return '1H';
     if (m.minute != null && m.minute > 45)
@@ -683,21 +709,21 @@ export function toLiveMatch(m, popularity) {
         ? m.league.split(':').map((s) => s.trim())
         : [undefined, m.league];
     return {
-        id: flashscoreIdToNumber(m.id),
-        flashscoreId: m.id,
-        homeFsTeamId: m.homeTeamId,
-        awayFsTeamId: m.awayTeamId,
+        id: providerIdToNumber(m.id),
+        providerId: m.id,
+        homeProviderTeamId: m.homeTeamId,
+        awayProviderTeamId: m.awayTeamId,
         league: leagueName || m.league,
         leagueLogo: m.leagueLogo,
         country,
         popularity,
         home: {
-            id: flashscoreIdToNumber(`h:${m.id}`),
+            id: providerIdToNumber(`h:${m.id}`),
             name: m.home,
             logo: m.homeLogo,
         },
         away: {
-            id: flashscoreIdToNumber(`a:${m.id}`),
+            id: providerIdToNumber(`a:${m.id}`),
             name: m.away,
             logo: m.awayLogo,
         },
@@ -713,8 +739,8 @@ export function toLiveMatch(m, popularity) {
         kickoff: m.kickoffTs != null ? new Date(m.kickoffTs * 1000).toISOString() : undefined,
     };
 }
-/** Live board from Flashscore (in-play + recently finished). */
-export async function fetchFlashscoreLiveMatches(scorePopularity, retainUntil) {
+/** Live board from feed (in-play + recently finished). */
+export async function fetchLiveFeedMatches(scorePopularity, retainUntil) {
     const all = await fetchFootballFeed(true);
     return selectBoardMatches(all, retainUntil).map((m) => toLiveMatch(m, scorePopularity({ league: m.league, homeName: m.home, awayName: m.away })));
 }

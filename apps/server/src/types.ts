@@ -39,11 +39,11 @@ export interface MatchOdds {
 
 export interface LiveMatch {
   id: number;
-  /** Original Flashscore match id when sourced from FS */
-  flashscoreId?: string;
-  /** Flashscore participant ids (for odds mapping) */
-  homeFsTeamId?: string;
-  awayFsTeamId?: string;
+  /** Original provider match id when sourced from the live feed */
+  providerId?: string;
+  /** Provider participant ids (for odds mapping) */
+  homeProviderTeamId?: string;
+  awayProviderTeamId?: string;
   league: string;
   leagueId?: number;
   leagueLogo?: string;
