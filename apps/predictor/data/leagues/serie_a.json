@@ -1,0 +1,20 @@
+{
+  "name": "Serie A",
+  "seed": 135,
+  "teams": [
+    {"id": 1, "name": "Inter", "attack": 1.36, "defense": 0.80, "elo": 1920},
+    {"id": 2, "name": "AC Milan", "attack": 1.24, "defense": 0.90, "elo": 1850},
+    {"id": 3, "name": "Juventus", "attack": 1.20, "defense": 0.86, "elo": 1840},
+    {"id": 4, "name": "Napoli", "attack": 1.28, "defense": 0.92, "elo": 1860},
+    {"id": 5, "name": "Atalanta", "attack": 1.30, "defense": 0.98, "elo": 1835},
+    {"id": 6, "name": "Roma", "attack": 1.14, "defense": 0.94, "elo": 1785},
+    {"id": 7, "name": "Lazio", "attack": 1.12, "defense": 0.96, "elo": 1770},
+    {"id": 8, "name": "Fiorentina", "attack": 1.10, "defense": 1.00, "elo": 1740}
+  ],
+  "fixtures": [
+    {"home": "Inter", "away": "AC Milan"},
+    {"home": "Juventus", "away": "Napoli"},
+    {"home": "Atalanta", "away": "Roma"},
+    {"home": "Lazio", "away": "Fiorentina"}
+  ]
+}

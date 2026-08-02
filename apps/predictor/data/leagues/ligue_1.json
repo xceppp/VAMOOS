@@ -1,0 +1,20 @@
+{
+  "name": "Ligue 1",
+  "seed": 61,
+  "teams": [
+    {"id": 1, "name": "PSG", "attack": 1.50, "defense": 0.84, "elo": 1945},
+    {"id": 2, "name": "Monaco", "attack": 1.24, "defense": 0.94, "elo": 1780},
+    {"id": 3, "name": "Marseille", "attack": 1.20, "defense": 0.96, "elo": 1765},
+    {"id": 4, "name": "Lille", "attack": 1.16, "defense": 0.90, "elo": 1755},
+    {"id": 5, "name": "Lyon", "attack": 1.18, "defense": 1.00, "elo": 1730},
+    {"id": 6, "name": "Nice", "attack": 1.08, "defense": 0.92, "elo": 1710},
+    {"id": 7, "name": "Rennes", "attack": 1.06, "defense": 1.02, "elo": 1685},
+    {"id": 8, "name": "Lens", "attack": 1.10, "defense": 0.98, "elo": 1700}
+  ],
+  "fixtures": [
+    {"home": "PSG", "away": "Marseille"},
+    {"home": "Monaco", "away": "Lille"},
+    {"home": "Lyon", "away": "Nice"},
+    {"home": "Rennes", "away": "Lens"}
+  ]
+}

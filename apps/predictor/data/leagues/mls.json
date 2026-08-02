@@ -1,0 +1,23 @@
+{
+  "name": "Major League Soccer",
+  "seed": 253,
+  "teams": [
+    {"id": 1, "name": "Inter Miami", "attack": 1.35, "defense": 0.95, "elo": 1620},
+    {"id": 2, "name": "LAFC", "attack": 1.28, "defense": 0.98, "elo": 1595},
+    {"id": 3, "name": "Seattle Sounders", "attack": 1.15, "defense": 0.92, "elo": 1560},
+    {"id": 4, "name": "Columbus Crew", "attack": 1.18, "defense": 0.96, "elo": 1570},
+    {"id": 5, "name": "FC Cincinnati", "attack": 1.22, "defense": 0.94, "elo": 1580},
+    {"id": 6, "name": "Philadelphia Union", "attack": 1.10, "defense": 1.00, "elo": 1540},
+    {"id": 7, "name": "Austin FC", "attack": 0.98, "defense": 1.08, "elo": 1485},
+    {"id": 8, "name": "NYCFC", "attack": 1.12, "defense": 1.02, "elo": 1530},
+    {"id": 9, "name": "Atlanta United", "attack": 1.08, "defense": 1.05, "elo": 1510},
+    {"id": 10, "name": "LA Galaxy", "attack": 1.05, "defense": 1.10, "elo": 1495}
+  ],
+  "fixtures": [
+    {"home": "Inter Miami", "away": "LAFC"},
+    {"home": "Seattle Sounders", "away": "Austin FC"},
+    {"home": "Columbus Crew", "away": "FC Cincinnati"},
+    {"home": "Philadelphia Union", "away": "NYCFC"},
+    {"home": "Atlanta United", "away": "LA Galaxy"}
+  ]
+}

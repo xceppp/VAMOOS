@@ -1,0 +1,20 @@
+{
+  "name": "La Liga",
+  "seed": 140,
+  "teams": [
+    {"id": 1, "name": "Real Madrid", "attack": 1.42, "defense": 0.80, "elo": 1970},
+    {"id": 2, "name": "Barcelona", "attack": 1.40, "defense": 0.86, "elo": 1950},
+    {"id": 3, "name": "Atletico Madrid", "attack": 1.18, "defense": 0.78, "elo": 1880},
+    {"id": 4, "name": "Athletic Club", "attack": 1.12, "defense": 0.90, "elo": 1780},
+    {"id": 5, "name": "Real Sociedad", "attack": 1.10, "defense": 0.94, "elo": 1760},
+    {"id": 6, "name": "Villarreal", "attack": 1.14, "defense": 0.98, "elo": 1750},
+    {"id": 7, "name": "Real Betis", "attack": 1.08, "defense": 1.00, "elo": 1725},
+    {"id": 8, "name": "Sevilla", "attack": 1.00, "defense": 1.05, "elo": 1685}
+  ],
+  "fixtures": [
+    {"home": "Real Madrid", "away": "Barcelona"},
+    {"home": "Atletico Madrid", "away": "Athletic Club"},
+    {"home": "Real Sociedad", "away": "Villarreal"},
+    {"home": "Real Betis", "away": "Sevilla"}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "UEFA Champions League",
+  "seed": 2,
+  "teams": [
+    {"id": 1, "name": "Real Madrid", "attack": 1.42, "defense": 0.82, "elo": 1985},
+    {"id": 2, "name": "Manchester City", "attack": 1.45, "defense": 0.80, "elo": 1990},
+    {"id": 3, "name": "Bayern Munich", "attack": 1.40, "defense": 0.84, "elo": 1965},
+    {"id": 4, "name": "PSG", "attack": 1.38, "defense": 0.88, "elo": 1940},
+    {"id": 5, "name": "Barcelona", "attack": 1.36, "defense": 0.90, "elo": 1930},
+    {"id": 6, "name": "Inter", "attack": 1.28, "defense": 0.82, "elo": 1905},
+    {"id": 7, "name": "Arsenal", "attack": 1.32, "defense": 0.86, "elo": 1920},
+    {"id": 8, "name": "Dortmund", "attack": 1.26, "defense": 0.96, "elo": 1870}
+  ],
+  "fixtures": [
+    {"home": "Manchester City", "away": "Real Madrid"},
+    {"home": "Bayern Munich", "away": "PSG"},
+    {"home": "Barcelona", "away": "Inter"},
+    {"home": "Arsenal", "away": "Dortmund"}
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Premier League",
+  "seed": 39,
+  "teams": [
+    {"id": 1, "name": "Manchester City", "attack": 1.45, "defense": 0.78, "elo": 1980},
+    {"id": 2, "name": "Arsenal", "attack": 1.38, "defense": 0.82, "elo": 1955},
+    {"id": 3, "name": "Liverpool", "attack": 1.40, "defense": 0.85, "elo": 1965},
+    {"id": 4, "name": "Chelsea", "attack": 1.22, "defense": 0.95, "elo": 1840},
+    {"id": 5, "name": "Manchester United", "attack": 1.18, "defense": 1.00, "elo": 1805},
+    {"id": 6, "name": "Tottenham", "attack": 1.25, "defense": 1.05, "elo": 1810},
+    {"id": 7, "name": "Newcastle", "attack": 1.20, "defense": 0.92, "elo": 1825},
+    {"id": 8, "name": "Aston Villa", "attack": 1.16, "defense": 0.96, "elo": 1790},
+    {"id": 9, "name": "Brighton", "attack": 1.10, "defense": 1.02, "elo": 1720},
+    {"id": 10, "name": "West Ham", "attack": 1.02, "defense": 1.08, "elo": 1680},
+    {"id": 11, "name": "Everton", "attack": 0.95, "defense": 1.00, "elo": 1655},
+    {"id": 12, "name": "Wolves", "attack": 0.92, "defense": 1.06, "elo": 1630}
+  ],
+  "fixtures": [
+    {"home": "Arsenal", "away": "Chelsea"},
+    {"home": "Liverpool", "away": "Manchester United"},
+    {"home": "Manchester City", "away": "Tottenham"},
+    {"home": "Newcastle", "away": "Aston Villa"},
+    {"home": "Brighton", "away": "West Ham"},
+    {"home": "Everton", "away": "Wolves"}
+  ]
+}

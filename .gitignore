@@ -1,0 +1,16 @@
+node_modules
+dist
+.env
+*.local
+.DS_Store
+__pycache__/
+*.pyc
+apps/server/.env
+apps/web/dist
+apps/server/dist
+apps/web/android/.gradle
+apps/web/android/app/build
+apps/web/android/build
+apps/web/android/captures
+apps/web/ios/App/Pods
+apps/web/ios/DerivedData

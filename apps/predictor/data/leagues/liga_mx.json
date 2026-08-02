@@ -1,0 +1,20 @@
+{
+  "name": "Liga MX",
+  "seed": 262,
+  "teams": [
+    {"id": 1, "name": "Club America", "attack": 1.28, "defense": 0.90, "elo": 1720},
+    {"id": 2, "name": "Monterrey", "attack": 1.22, "defense": 0.92, "elo": 1700},
+    {"id": 3, "name": "Tigres", "attack": 1.20, "defense": 0.94, "elo": 1690},
+    {"id": 4, "name": "Chivas", "attack": 1.10, "defense": 0.98, "elo": 1640},
+    {"id": 5, "name": "Pumas", "attack": 1.08, "defense": 1.00, "elo": 1620},
+    {"id": 6, "name": "Cruz Azul", "attack": 1.16, "defense": 0.96, "elo": 1675},
+    {"id": 7, "name": "Santos Laguna", "attack": 1.02, "defense": 1.06, "elo": 1580},
+    {"id": 8, "name": "Toluca", "attack": 1.18, "defense": 1.02, "elo": 1660}
+  ],
+  "fixtures": [
+    {"home": "Club America", "away": "Chivas"},
+    {"home": "Monterrey", "away": "Tigres"},
+    {"home": "Cruz Azul", "away": "Pumas"},
+    {"home": "Toluca", "away": "Santos Laguna"}
+  ]
+}

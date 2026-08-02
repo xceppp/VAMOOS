@@ -1,0 +1,20 @@
+{
+  "name": "Bundesliga",
+  "seed": 78,
+  "teams": [
+    {"id": 1, "name": "Bayern Munich", "attack": 1.48, "defense": 0.82, "elo": 1960},
+    {"id": 2, "name": "Bayer Leverkusen", "attack": 1.34, "defense": 0.88, "elo": 1900},
+    {"id": 3, "name": "Dortmund", "attack": 1.30, "defense": 0.96, "elo": 1865},
+    {"id": 4, "name": "RB Leipzig", "attack": 1.26, "defense": 0.92, "elo": 1850},
+    {"id": 5, "name": "Stuttgart", "attack": 1.18, "defense": 0.98, "elo": 1760},
+    {"id": 6, "name": "Frankfurt", "attack": 1.16, "defense": 1.00, "elo": 1745},
+    {"id": 7, "name": "Wolfsburg", "attack": 1.05, "defense": 1.04, "elo": 1680},
+    {"id": 8, "name": "Gladbach", "attack": 1.08, "defense": 1.06, "elo": 1670}
+  ],
+  "fixtures": [
+    {"home": "Bayern Munich", "away": "Dortmund"},
+    {"home": "Bayer Leverkusen", "away": "RB Leipzig"},
+    {"home": "Stuttgart", "away": "Frankfurt"},
+    {"home": "Wolfsburg", "away": "Gladbach"}
+  ]
+}
