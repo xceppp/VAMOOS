@@ -2,19 +2,134 @@
   "name": "UEFA Champions League",
   "seed": 2,
   "teams": [
-    {"id": 1, "name": "Real Madrid", "attack": 1.42, "defense": 0.82, "elo": 1985},
-    {"id": 2, "name": "Manchester City", "attack": 1.45, "defense": 0.80, "elo": 1990},
-    {"id": 3, "name": "Bayern Munich", "attack": 1.40, "defense": 0.84, "elo": 1965},
-    {"id": 4, "name": "PSG", "attack": 1.38, "defense": 0.88, "elo": 1940},
-    {"id": 5, "name": "Barcelona", "attack": 1.36, "defense": 0.90, "elo": 1930},
-    {"id": 6, "name": "Inter", "attack": 1.28, "defense": 0.82, "elo": 1905},
-    {"id": 7, "name": "Arsenal", "attack": 1.32, "defense": 0.86, "elo": 1920},
-    {"id": 8, "name": "Dortmund", "attack": 1.26, "defense": 0.96, "elo": 1870}
+    {
+      "id": 1,
+      "name": "Real Madrid",
+      "attack": 1.42,
+      "defense": 0.82,
+      "elo": 1985,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.491,
+      "attack_away": 1.349,
+      "defense_home": 0.787,
+      "defense_away": 0.853
+    },
+    {
+      "id": 2,
+      "name": "Manchester City",
+      "attack": 1.45,
+      "defense": 0.8,
+      "elo": 1990,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.522,
+      "attack_away": 1.377,
+      "defense_home": 0.768,
+      "defense_away": 0.832
+    },
+    {
+      "id": 3,
+      "name": "Bayern Munich",
+      "attack": 1.4,
+      "defense": 0.84,
+      "elo": 1965,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.47,
+      "attack_away": 1.33,
+      "defense_home": 0.806,
+      "defense_away": 0.874
+    },
+    {
+      "id": 4,
+      "name": "PSG",
+      "attack": 1.38,
+      "defense": 0.88,
+      "elo": 1940,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.449,
+      "attack_away": 1.311,
+      "defense_home": 0.845,
+      "defense_away": 0.915
+    },
+    {
+      "id": 5,
+      "name": "Barcelona",
+      "attack": 1.36,
+      "defense": 0.9,
+      "elo": 1930,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.428,
+      "attack_away": 1.292,
+      "defense_home": 0.864,
+      "defense_away": 0.936
+    },
+    {
+      "id": 6,
+      "name": "Inter",
+      "attack": 1.28,
+      "defense": 0.82,
+      "elo": 1905,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.344,
+      "attack_away": 1.216,
+      "defense_home": 0.787,
+      "defense_away": 0.853
+    },
+    {
+      "id": 7,
+      "name": "Arsenal",
+      "attack": 1.32,
+      "defense": 0.86,
+      "elo": 1920,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.386,
+      "attack_away": 1.254,
+      "defense_home": 0.826,
+      "defense_away": 0.894
+    },
+    {
+      "id": 8,
+      "name": "Dortmund",
+      "attack": 1.26,
+      "defense": 0.96,
+      "elo": 1870,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.323,
+      "attack_away": 1.197,
+      "defense_home": 0.922,
+      "defense_away": 0.998
+    }
   ],
   "fixtures": [
-    {"home": "Manchester City", "away": "Real Madrid"},
-    {"home": "Bayern Munich", "away": "PSG"},
-    {"home": "Barcelona", "away": "Inter"},
-    {"home": "Arsenal", "away": "Dortmund"}
-  ]
+    {
+      "home": "Manchester City",
+      "away": "Real Madrid"
+    },
+    {
+      "home": "Bayern Munich",
+      "away": "PSG"
+    },
+    {
+      "home": "Barcelona",
+      "away": "Inter"
+    },
+    {
+      "home": "Arsenal",
+      "away": "Dortmund"
+    }
+  ],
+  "calibration": {
+    "rho": -0.08,
+    "home_advantage": 1.1,
+    "scoring_variance": 1.05,
+    "parity": 0.88,
+    "max_displayed_confidence": 0.7
+  }
 }

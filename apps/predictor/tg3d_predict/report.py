@@ -107,7 +107,7 @@ def render_high_goals_report(
 
     lines = [
         "=" * 120,
-        "TG3D HIGHER GOALS + BUTS (BTTS) POTENTIAL",
+        "VAMOOS HIGHER GOALS + BUTS (BTTS) POTENTIAL",
         "No winner picks. Focus = many goals + both teams to score.",
         f"League : {league_name}",
         f"Date   : {day}",
@@ -145,14 +145,15 @@ def render_high_goals_report(
     return "\n".join(lines)
 
 
-def render_sure_table(predictions: list[MatchPrediction], threshold: float) -> str:
+def render_confidence_table(predictions: list[MatchPrediction], threshold: float) -> str:
     cols = [
         ("#", 3),
         ("MATCH", 39),
         ("xG", 9),
         ("TOT", 5),
-        ("SURE PICK", 22),
-        ("PROB", 7),
+        ("HIGH-CONF PICK", 22),
+        ("RAW", 6),
+        ("CAL", 6),
         ("SCORE", 7),
     ]
 
@@ -168,6 +169,7 @@ def render_sure_table(predictions: list[MatchPrediction], threshold: float) -> s
 
     for i, p in enumerate(predictions, start=1):
         match = f"{_short(p.home, 18)} v {_short(p.away, 18)}".strip()
+        raw = getattr(p, "tip_prob_raw", p.tip_prob)
         rows.append(
             fmt_row(
                 [
@@ -176,49 +178,58 @@ def render_sure_table(predictions: list[MatchPrediction], threshold: float) -> s
                     f"{p.lambda_home:.1f}-{p.lambda_away:.1f}",
                     f"{p.total_xg:.1f}",
                     p.tip,
+                    pct(raw),
                     pct(p.tip_prob),
                     p.most_likely_score,
                 ]
             )
         )
     if not predictions:
-        rows.append(f"(no picks at >= {threshold * 100:.0f}% sure)")
+        rows.append(f"(no picks at >= {threshold * 100:.0f}% calibrated confidence)")
     return "\n".join(rows)
 
 
-def render_report(
+def render_confidence_report(
     league_name: str,
     day: str,
     predictions: list[MatchPrediction],
     mode: str,
-    threshold: float = 0.99,
+    threshold: float = 0.58,
     near_misses: list[MatchPrediction] | None = None,
+    max_displayed: float = 0.72,
 ) -> str:
     header = [
         "=" * 100,
-        f"TG3D SURE GOALS ONLY  (>= {threshold * 100:.0f}% model probability)",
-        "No winner / draw picks. Goals markets only.",
+        f"VAMOOS HIGH-CONFIDENCE ANALYSIS  (>= {threshold * 100:.0f}% calibrated)",
+        "Probabilities are capped by backtest-aware calibration (not raw overconfidence).",
         f"League : {league_name}",
         f"Date   : {day}",
         f"Mode   : {mode}",
+        f"Cap    : displayed confidence <= {max_displayed * 100:.0f}%",
         "=" * 100,
         "",
-        f"Sure picks: {len(predictions)}",
+        f"High-confidence picks: {len(predictions)}",
         "",
-        render_sure_table(predictions, threshold),
+        render_confidence_table(predictions, threshold),
     ]
 
     if not predictions and near_misses:
         header.extend(
             [
                 "",
-                "No 99% sure goals pick found.",
-                "Closest (still NOT 99%):",
+                "No pick cleared the calibrated threshold.",
+                "Closest:",
                 "",
-                render_sure_table(near_misses[:5], threshold),
+                render_confidence_table(near_misses[:5], threshold),
             ]
         )
 
     header.append("")
-    header.append("PROB = model probability for that single goals market (honest, not forced to 99).")
+    header.append("RAW = model probability before calibration; CAL = display confidence.")
+    header.append("Football is high-variance — treat anything near 99% as a bug, not a tip.")
     return "\n".join(header)
+
+
+# Back-compat aliases
+render_sure_table = render_confidence_table
+render_report = render_confidence_report

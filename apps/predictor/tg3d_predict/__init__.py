@@ -1,6 +1,12 @@
-"""TG3D football match probability predictor (offline)."""
+"""VAMOOS football match probability predictor (offline, calibrated)."""
 
 from .leagues import list_leagues, resolve_league
-from .model import MatchPrediction, PredictorEngine
+from .model import LeagueCalibration, MatchPrediction, PredictorEngine
 
-__all__ = ["list_leagues", "resolve_league", "MatchPrediction", "PredictorEngine"]
+__all__ = [
+    "list_leagues",
+    "resolve_league",
+    "LeagueCalibration",
+    "MatchPrediction",
+    "PredictorEngine",
+]

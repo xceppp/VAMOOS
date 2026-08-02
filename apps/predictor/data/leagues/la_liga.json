@@ -2,19 +2,134 @@
   "name": "La Liga",
   "seed": 140,
   "teams": [
-    {"id": 1, "name": "Real Madrid", "attack": 1.42, "defense": 0.80, "elo": 1970},
-    {"id": 2, "name": "Barcelona", "attack": 1.40, "defense": 0.86, "elo": 1950},
-    {"id": 3, "name": "Atletico Madrid", "attack": 1.18, "defense": 0.78, "elo": 1880},
-    {"id": 4, "name": "Athletic Club", "attack": 1.12, "defense": 0.90, "elo": 1780},
-    {"id": 5, "name": "Real Sociedad", "attack": 1.10, "defense": 0.94, "elo": 1760},
-    {"id": 6, "name": "Villarreal", "attack": 1.14, "defense": 0.98, "elo": 1750},
-    {"id": 7, "name": "Real Betis", "attack": 1.08, "defense": 1.00, "elo": 1725},
-    {"id": 8, "name": "Sevilla", "attack": 1.00, "defense": 1.05, "elo": 1685}
+    {
+      "id": 1,
+      "name": "Real Madrid",
+      "attack": 1.42,
+      "defense": 0.8,
+      "elo": 1970,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.491,
+      "attack_away": 1.349,
+      "defense_home": 0.768,
+      "defense_away": 0.832
+    },
+    {
+      "id": 2,
+      "name": "Barcelona",
+      "attack": 1.4,
+      "defense": 0.86,
+      "elo": 1950,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.47,
+      "attack_away": 1.33,
+      "defense_home": 0.826,
+      "defense_away": 0.894
+    },
+    {
+      "id": 3,
+      "name": "Atletico Madrid",
+      "attack": 1.18,
+      "defense": 0.78,
+      "elo": 1880,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.239,
+      "attack_away": 1.121,
+      "defense_home": 0.749,
+      "defense_away": 0.811
+    },
+    {
+      "id": 4,
+      "name": "Athletic Club",
+      "attack": 1.12,
+      "defense": 0.9,
+      "elo": 1780,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.176,
+      "attack_away": 1.064,
+      "defense_home": 0.864,
+      "defense_away": 0.936
+    },
+    {
+      "id": 5,
+      "name": "Real Sociedad",
+      "attack": 1.1,
+      "defense": 0.94,
+      "elo": 1760,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.155,
+      "attack_away": 1.045,
+      "defense_home": 0.902,
+      "defense_away": 0.978
+    },
+    {
+      "id": 6,
+      "name": "Villarreal",
+      "attack": 1.14,
+      "defense": 0.98,
+      "elo": 1750,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.197,
+      "attack_away": 1.083,
+      "defense_home": 0.941,
+      "defense_away": 1.019
+    },
+    {
+      "id": 7,
+      "name": "Real Betis",
+      "attack": 1.08,
+      "defense": 1.0,
+      "elo": 1725,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.134,
+      "attack_away": 1.026,
+      "defense_home": 0.96,
+      "defense_away": 1.04
+    },
+    {
+      "id": 8,
+      "name": "Sevilla",
+      "attack": 1.0,
+      "defense": 1.05,
+      "elo": 1685,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.05,
+      "attack_away": 0.95,
+      "defense_home": 1.008,
+      "defense_away": 1.092
+    }
   ],
   "fixtures": [
-    {"home": "Real Madrid", "away": "Barcelona"},
-    {"home": "Atletico Madrid", "away": "Athletic Club"},
-    {"home": "Real Sociedad", "away": "Villarreal"},
-    {"home": "Real Betis", "away": "Sevilla"}
-  ]
+    {
+      "home": "Real Madrid",
+      "away": "Barcelona"
+    },
+    {
+      "home": "Atletico Madrid",
+      "away": "Athletic Club"
+    },
+    {
+      "home": "Real Sociedad",
+      "away": "Villarreal"
+    },
+    {
+      "home": "Real Betis",
+      "away": "Sevilla"
+    }
+  ],
+  "calibration": {
+    "rho": -0.11,
+    "home_advantage": 1.13,
+    "scoring_variance": 0.98,
+    "parity": 0.92,
+    "max_displayed_confidence": 0.72
+  }
 }

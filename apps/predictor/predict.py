@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-TG3D Match Predictor (OFFLINE — no API)
+VAMOOS Match Predictor (OFFLINE — no API)
 Default: higher goals + BTTS/BUTS potential table.
 
 Examples:
   python predict.py --league mls
   python predict.py --league mls --mode high
-  python predict.py --league mls --mode sure --sure 0.95
+  python predict.py --league mls --mode confidence --min-confidence 0.58
   python predict.py --list
 """
 
@@ -21,9 +21,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from tg3d_predict.leagues import list_leagues, resolve_league
-from tg3d_predict.model import PredictorEngine
+from tg3d_predict.model import LeagueCalibration, PredictorEngine
 from tg3d_predict.offline import (
     custom_match_rows,
+    load_confidence_curve,
     load_league_pack,
     pack_to_bundles,
     parse_fixture,
@@ -31,14 +32,14 @@ from tg3d_predict.offline import (
 from tg3d_predict.report import (
     goals_potential_label,
     high_goals_score,
+    render_confidence_report,
     render_high_goals_report,
-    render_report,
 )
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Offline goals/buts predictions",
+        description="Offline goals/buts predictions (calibrated)",
     )
     p.add_argument("--league", "-l", default="mls", help="League pack name")
     p.add_argument("--home", help="Custom home team")
@@ -46,29 +47,23 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--date", "-d", default=None, help="Label date YYYY-MM-DD")
     p.add_argument(
         "--mode",
-        choices=("high", "sure"),
+        choices=("high", "confidence", "sure"),
         default="high",
-        help="high = higher goals + BTTS potential (default); sure = high-probability filter",
+        help="high = goals/BTTS heat; confidence = calibrated high-confidence filter "
+        "(legacy alias: sure)",
     )
     p.add_argument(
+        "--min-confidence",
         "--sure",
+        dest="min_confidence",
         type=float,
-        default=0.99,
-        help="Min probability for --mode sure (default 0.99)",
+        default=0.58,
+        help="Min calibrated probability for --mode confidence (default 0.58; "
+        "legacy --sure maps here; 0.99 is intentionally not the default)",
     )
     p.add_argument("--json", action="store_true", help="Print JSON")
     p.add_argument("--list", action="store_true", help="List league packs")
     return p.parse_args()
-
-
-def apply_pack_priors(engine: PredictorEngine, pack: dict) -> None:
-    for t in pack.get("teams") or []:
-        tid = int(t["id"])
-        team = engine._team(tid, t["name"])
-        team.attack = 0.6 * team.attack + 0.4 * float(t.get("attack", 1.0))
-        team.defense = 0.6 * team.defense + 0.4 * float(t.get("defense", 1.0))
-        if "elo" in t:
-            team.elo = 0.55 * team.elo + 0.45 * float(t["elo"])
 
 
 def main() -> int:
@@ -95,6 +90,7 @@ def main() -> int:
         return 2
 
     league_name = pack.get("name") or league_name
+    mode_key = "confidence" if args.mode in ("confidence", "sure") else "high"
 
     if args.home and args.away:
         today_rows, history_rows = custom_match_rows(args.home, args.away, pack)
@@ -105,9 +101,13 @@ def main() -> int:
     else:
         today_rows, history_rows = pack_to_bundles(pack)
 
-    engine = PredictorEngine()
+    cal = LeagueCalibration.from_pack(pack)
+    engine = PredictorEngine(calibration=cal)
     engine.fit(history_rows, standings=None)
-    apply_pack_priors(engine, pack)
+    engine.apply_pack_team_meta(pack)
+    curve = load_confidence_curve(slug)
+    if curve:
+        engine.set_confidence_curve(curve)
 
     all_preds = []
     for row in today_rows:
@@ -124,9 +124,9 @@ def main() -> int:
             )
         )
 
-    mode = f"offline-{args.mode}"
+    mode = f"offline-{mode_key}"
 
-    if args.mode == "high":
+    if mode_key == "high":
         ranked = sorted(all_preds, key=high_goals_score, reverse=True)
         if args.json:
             payload = {
@@ -135,6 +135,12 @@ def main() -> int:
                 "date": day.isoformat(),
                 "mode": mode,
                 "focus": "higher_goals_and_btts_buts",
+                "calibration": {
+                    "rho": cal.rho,
+                    "parity": cal.parity,
+                    "scoring_variance": cal.scoring_variance,
+                    "max_displayed_confidence": cal.max_displayed_confidence,
+                },
                 "matches": [
                     {
                         "home": p.home,
@@ -146,6 +152,9 @@ def main() -> int:
                             "total": round(p.total_xg, 3),
                         },
                         "prob": {
+                            "home": round(p.p_home, 4),
+                            "draw": round(p.p_draw, 4),
+                            "away": round(p.p_away, 4),
                             "over_15": round(p.p_over_15, 4),
                             "over_25": round(p.p_over_25, 4),
                             "over_35": round(p.p_over_35, 4),
@@ -167,11 +176,14 @@ def main() -> int:
                 print(report.encode("ascii", errors="replace").decode("ascii"))
         return 0
 
-    # sure mode
+    # confidence analysis (formerly "sure" mode)
     all_preds.sort(key=lambda p: p.tip_prob, reverse=True)
-    threshold = float(args.sure)
-    sure = [p for p in all_preds if p.tip_prob + 1e-12 >= threshold]
-    near = [p for p in all_preds if p not in sure]
+    threshold = float(args.min_confidence)
+    # Never honor absurd near-certainty thresholds as if they were skillful
+    if threshold > cal.max_displayed_confidence:
+        threshold = cal.max_displayed_confidence
+    high_conf = [p for p in all_preds if p.tip_prob + 1e-12 >= threshold]
+    near = [p for p in all_preds if p not in high_conf]
 
     if args.json:
         payload = {
@@ -179,23 +191,26 @@ def main() -> int:
             "slug": slug,
             "date": day.isoformat(),
             "mode": mode,
-            "focus": "goals_only_sure",
+            "focus": "calibrated_high_confidence",
             "threshold": threshold,
+            "max_displayed_confidence": cal.max_displayed_confidence,
             "matches": [
                 {
                     "home": p.home,
                     "away": p.away,
-                    "sure_pick": p.tip,
+                    "high_confidence_pick": p.tip,
+                    "probability_raw": round(p.tip_prob_raw, 6),
                     "probability": round(p.tip_prob, 6),
                     "most_likely_score": p.most_likely_score,
                 }
-                for p in sure
+                for p in high_conf
             ],
             "near_misses": [
                 {
                     "home": p.home,
                     "away": p.away,
-                    "sure_pick": p.tip,
+                    "high_confidence_pick": p.tip,
+                    "probability_raw": round(p.tip_prob_raw, 6),
                     "probability": round(p.tip_prob, 6),
                 }
                 for p in near[:5]
@@ -203,13 +218,14 @@ def main() -> int:
         }
         print(json.dumps(payload, indent=2))
     else:
-        report = render_report(
+        report = render_confidence_report(
             league_name,
             day.isoformat(),
-            sure,
+            high_conf,
             mode,
             threshold=threshold,
-            near_misses=near if not sure else None,
+            near_misses=near if not high_conf else None,
+            max_displayed=cal.max_displayed_confidence,
         )
         try:
             print(report)

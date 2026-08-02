@@ -22,6 +22,29 @@ def load_league_pack(slug: str) -> dict[str, Any]:
         return json.load(f)
 
 
+def calibration_dir() -> Path:
+    return Path(__file__).resolve().parents[1] / "data" / "calibration"
+
+
+def load_confidence_curve(slug: str) -> dict[float, float]:
+    """Load backtest-derived raw→empirical confidence map if present."""
+    path = calibration_dir() / f"{slug}.json"
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    curve_raw = payload.get("curve") or {}
+    out: dict[float, float] = {}
+    for k, v in curve_raw.items():
+        try:
+            out[float(k)] = float(v)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def _fixture_row(
     fid: int,
     when: datetime,

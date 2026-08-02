@@ -1,0 +1,14 @@
+{
+  "slug": "mls",
+  "label": "after-changes",
+  "curve": {
+    "0.875": 1.0,
+    "0.925": 0.8571
+  },
+  "max_displayed_confidence": 0.68,
+  "metrics": {
+    "brier": 0.73075,
+    "log_loss": 1.19077,
+    "accuracy_1x2": 0.11111
+  }
+}

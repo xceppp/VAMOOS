@@ -2,25 +2,194 @@
   "name": "Premier League",
   "seed": 39,
   "teams": [
-    {"id": 1, "name": "Manchester City", "attack": 1.45, "defense": 0.78, "elo": 1980},
-    {"id": 2, "name": "Arsenal", "attack": 1.38, "defense": 0.82, "elo": 1955},
-    {"id": 3, "name": "Liverpool", "attack": 1.40, "defense": 0.85, "elo": 1965},
-    {"id": 4, "name": "Chelsea", "attack": 1.22, "defense": 0.95, "elo": 1840},
-    {"id": 5, "name": "Manchester United", "attack": 1.18, "defense": 1.00, "elo": 1805},
-    {"id": 6, "name": "Tottenham", "attack": 1.25, "defense": 1.05, "elo": 1810},
-    {"id": 7, "name": "Newcastle", "attack": 1.20, "defense": 0.92, "elo": 1825},
-    {"id": 8, "name": "Aston Villa", "attack": 1.16, "defense": 0.96, "elo": 1790},
-    {"id": 9, "name": "Brighton", "attack": 1.10, "defense": 1.02, "elo": 1720},
-    {"id": 10, "name": "West Ham", "attack": 1.02, "defense": 1.08, "elo": 1680},
-    {"id": 11, "name": "Everton", "attack": 0.95, "defense": 1.00, "elo": 1655},
-    {"id": 12, "name": "Wolves", "attack": 0.92, "defense": 1.06, "elo": 1630}
+    {
+      "id": 1,
+      "name": "Manchester City",
+      "attack": 1.45,
+      "defense": 0.78,
+      "elo": 1980,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.522,
+      "attack_away": 1.377,
+      "defense_home": 0.749,
+      "defense_away": 0.811
+    },
+    {
+      "id": 2,
+      "name": "Arsenal",
+      "attack": 1.38,
+      "defense": 0.82,
+      "elo": 1955,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.449,
+      "attack_away": 1.311,
+      "defense_home": 0.787,
+      "defense_away": 0.853
+    },
+    {
+      "id": 3,
+      "name": "Liverpool",
+      "attack": 1.4,
+      "defense": 0.85,
+      "elo": 1965,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.47,
+      "attack_away": 1.33,
+      "defense_home": 0.816,
+      "defense_away": 0.884
+    },
+    {
+      "id": 4,
+      "name": "Chelsea",
+      "attack": 1.22,
+      "defense": 0.95,
+      "elo": 1840,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.281,
+      "attack_away": 1.159,
+      "defense_home": 0.912,
+      "defense_away": 0.988
+    },
+    {
+      "id": 5,
+      "name": "Manchester United",
+      "attack": 1.18,
+      "defense": 1.0,
+      "elo": 1805,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.239,
+      "attack_away": 1.121,
+      "defense_home": 0.96,
+      "defense_away": 1.04
+    },
+    {
+      "id": 6,
+      "name": "Tottenham",
+      "attack": 1.25,
+      "defense": 1.05,
+      "elo": 1810,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.312,
+      "attack_away": 1.188,
+      "defense_home": 1.008,
+      "defense_away": 1.092
+    },
+    {
+      "id": 7,
+      "name": "Newcastle",
+      "attack": 1.2,
+      "defense": 0.92,
+      "elo": 1825,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.26,
+      "attack_away": 1.14,
+      "defense_home": 0.883,
+      "defense_away": 0.957
+    },
+    {
+      "id": 8,
+      "name": "Aston Villa",
+      "attack": 1.16,
+      "defense": 0.96,
+      "elo": 1790,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.218,
+      "attack_away": 1.102,
+      "defense_home": 0.922,
+      "defense_away": 0.998
+    },
+    {
+      "id": 9,
+      "name": "Brighton",
+      "attack": 1.1,
+      "defense": 1.02,
+      "elo": 1720,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.155,
+      "attack_away": 1.045,
+      "defense_home": 0.979,
+      "defense_away": 1.061
+    },
+    {
+      "id": 10,
+      "name": "West Ham",
+      "attack": 1.02,
+      "defense": 1.08,
+      "elo": 1680,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 1.071,
+      "attack_away": 0.969,
+      "defense_home": 1.037,
+      "defense_away": 1.123
+    },
+    {
+      "id": 11,
+      "name": "Everton",
+      "attack": 0.95,
+      "defense": 1.0,
+      "elo": 1655,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 0.997,
+      "attack_away": 0.902,
+      "defense_home": 0.96,
+      "defense_away": 1.04
+    },
+    {
+      "id": 12,
+      "name": "Wolves",
+      "attack": 0.92,
+      "defense": 1.06,
+      "elo": 1630,
+      "availability_penalty": 0.0,
+      "key_absences": [],
+      "attack_home": 0.966,
+      "attack_away": 0.874,
+      "defense_home": 1.018,
+      "defense_away": 1.102
+    }
   ],
   "fixtures": [
-    {"home": "Arsenal", "away": "Chelsea"},
-    {"home": "Liverpool", "away": "Manchester United"},
-    {"home": "Manchester City", "away": "Tottenham"},
-    {"home": "Newcastle", "away": "Aston Villa"},
-    {"home": "Brighton", "away": "West Ham"},
-    {"home": "Everton", "away": "Wolves"}
-  ]
+    {
+      "home": "Arsenal",
+      "away": "Chelsea"
+    },
+    {
+      "home": "Liverpool",
+      "away": "Manchester United"
+    },
+    {
+      "home": "Manchester City",
+      "away": "Tottenham"
+    },
+    {
+      "home": "Newcastle",
+      "away": "Aston Villa"
+    },
+    {
+      "home": "Brighton",
+      "away": "West Ham"
+    },
+    {
+      "home": "Everton",
+      "away": "Wolves"
+    }
+  ],
+  "calibration": {
+    "rho": -0.1,
+    "home_advantage": 1.14,
+    "scoring_variance": 1.02,
+    "parity": 0.95,
+    "max_displayed_confidence": 0.72
+  }
 }
