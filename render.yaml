@@ -3,11 +3,13 @@ services:
     name: vamoos
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build
+    buildCommand: NPM_CONFIG_PRODUCTION=false npm ci && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: LIVE_SOURCE
         value: flashscore
       - key: HOST

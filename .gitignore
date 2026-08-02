@@ -6,9 +6,7 @@ dist
 __pycache__/
 *.pyc
 apps/server/.env
-apps/server/public
 apps/web/dist
-apps/server/dist
 apps/web/android/.gradle
 apps/web/android/app/build
 apps/web/android/build
