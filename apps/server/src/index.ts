@@ -24,6 +24,7 @@ import { createWsHub } from './ws.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, '../.env') });
+dotenv.config({ path: resolve(process.cwd(), '.env') });
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -36,7 +37,24 @@ const SIDE_INTERVAL_MS = Number(process.env.SIDE_INTERVAL_MS ?? 8_000);
 const API_KEY = process.env.API_FOOTBALL_KEY?.trim() || undefined;
 const DETAIL_CACHE_MS = 12_000;
 const detailCache = new Map<number, { at: number; data: MatchDetail }>();
-const webDist = resolve(__dirname, '../../web/dist');
+
+/** Built SPA folder — prefers server/public (deploy copy), then apps/web/dist. */
+function resolveWebDist(): string | null {
+  const candidates = [
+    resolve(__dirname, '../public'),
+    resolve(__dirname, 'public'),
+    resolve(__dirname, '../../web/dist'),
+    resolve(process.cwd(), 'apps/web/dist'),
+    resolve(process.cwd(), 'apps/server/public'),
+    resolve(process.cwd(), 'public'),
+  ];
+  for (const dir of candidates) {
+    if (existsSync(resolve(dir, 'index.html'))) return dir;
+  }
+  return null;
+}
+
+const webDist = resolveWebDist();
 
 const app = express();
 app.use(cors({ origin: true }));
@@ -277,14 +295,30 @@ app.get('/api/predictions/late-goals', async (req, res) => {
   }
 });
 
-// Serve the built web/PWA app (after `npm run build` in apps/web)
-if (existsSync(webDist)) {
-  app.use(express.static(webDist));
+// Serve the built web/PWA app (after root `npm run build`)
+if (webDist) {
+  app.use(express.static(webDist, { index: false }));
   app.get(/^(?!\/api\/|\/health$|\/ws).*/, (req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     res.sendFile(resolve(webDist, 'index.html'), (err) => {
       if (err) next(err);
     });
+  });
+} else {
+  app.get('/', (_req, res) => {
+    res
+      .status(503)
+      .type('html')
+      .send(
+        '<!doctype html><meta charset="utf-8"><title>VAMOOS</title>' +
+          '<body style="font-family:sans-serif;padding:2rem">' +
+          '<h1>VAMOOS API is running</h1>' +
+          '<p>The web UI was not built into this deploy.</p>' +
+          '<p>Set the host <strong>Build Command</strong> to <code>npm run build</code> ' +
+          'and <strong>Start Command</strong> to <code>npm start</code>.</p>' +
+          '<p>Health: <a href="/health">/health</a></p>' +
+          '</body>',
+      );
   });
 }
 
@@ -293,7 +327,9 @@ server.listen(PORT, HOST, () => {
   console.log(`[server] http://${HOST}:${PORT} (LAN)`);
   console.log(`[server] ws://localhost:${PORT}/ws`);
   console.log(`[server] live source=${LIVE_SOURCE} poll=${POLL_INTERVAL_MS}ms`);
-  if (existsSync(webDist)) {
-    console.log(`[server] serving PWA from ${webDist}`);
+  if (webDist) {
+    console.log(`[server] serving web UI from ${webDist}`);
+  } else {
+    console.warn('[server] web UI missing — run `npm run build` so / serves the app');
   }
 });

@@ -44,7 +44,7 @@ export function toggleFavorite(id: number): number[] {
 
 export function subscribeFavorites(listener: () => void): () => void {
   const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY || e.key === LEGACY_KEY) listener();
+    if (e.key === KEY || (e.key != null && LEGACY_KEYS.includes(e.key))) listener();
   };
   window.addEventListener('storage', onStorage);
   window.addEventListener('vamoos:favorites', listener);

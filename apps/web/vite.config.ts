@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  // Relative paths so Capacitor can load assets from the device bundle
-  base: './',
+  // `/` for Express/web deploys; `./` for Capacitor (`VITE_BASE=./ npm run build`)
+  base: process.env.VITE_BASE?.trim() || '/',
   plugins: [
     react(),
     VitePWA({

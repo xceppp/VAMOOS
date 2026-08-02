@@ -38,9 +38,7 @@ export function wsUrl(): string {
     return u.toString().replace(/\/$/, '');
   }
 
+  // Same-origin WebSocket (Vite proxy in dev, Express /ws in production)
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  if (import.meta.env.DEV) {
-    return `${proto}//${window.location.host}/ws`;
-  }
-  return `${proto}//${window.location.hostname}:3001/ws`;
+  return `${proto}//${window.location.host}/ws`;
 }

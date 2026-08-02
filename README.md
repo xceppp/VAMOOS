@@ -46,8 +46,18 @@ Until AdSense approves you, placeholders keep the layout ready.
 | Command | What it does |
 |---------|----------------|
 | `npm run dev` | API + web together |
-| `npm run build` | Build both apps |
-| `npm run start` | Host built web + API |
+| `npm run build` | Build both apps + copy web UI into the server |
+| `npm run start` | Host built web + API on one port |
 | `npm run mobile:android` | Capacitor Android |
+
+## Deploy (Render / Railway / Docker)
+
+Use **one** web service from the repo root:
+
+- **Build:** `npm ci && npm run build`
+- **Start:** `npm start`
+- **Port:** use the host `PORT` env (already supported)
+
+If you open the site and see `Cannot GET /`, the build step did not produce the web UI — fix the Build command above (not only `npm start`).
 
 See `MOBILE.md` for phone install.

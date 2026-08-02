@@ -42,7 +42,7 @@ function readLang(): Lang {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => readLang());
-  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  const dir: 'ltr' | 'rtl' = lang === 'ar' ? 'rtl' : 'ltr';
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next);

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: vamoos
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: LIVE_SOURCE
+        value: flashscore
+      - key: HOST
+        value: 0.0.0.0
