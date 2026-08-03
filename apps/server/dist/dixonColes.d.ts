@@ -2,6 +2,29 @@
  * Dixon-Coles + Elo predictions via the offline Python engine.
  * Used for live + upcoming boards on the Predictions page.
  */
+export interface DixonMarketSide {
+    pick: string;
+    side?: string;
+    team?: string | null;
+    prob: number;
+    home?: number;
+    draw?: number;
+    away?: number;
+    over?: number;
+    under?: number;
+    yes?: number;
+    no?: number;
+    anyGoal?: number;
+}
+export interface DixonMarkets {
+    result: DixonMarketSide;
+    moreGoals: DixonMarketSide;
+    over15: DixonMarketSide;
+    over25: DixonMarketSide;
+    over35: DixonMarketSide;
+    btts: DixonMarketSide;
+    nextGoal: DixonMarketSide | null;
+}
 export interface DixonPick {
     id: string;
     liveId?: number;
@@ -27,6 +50,11 @@ export interface DixonPick {
         away: number;
         total: number;
     };
+    expectedRemaining?: {
+        home: number;
+        away: number;
+        total: number;
+    };
     prob: {
         home: number;
         draw: number;
@@ -36,6 +64,7 @@ export interface DixonPick {
         over35: number;
         btts: number;
     };
+    markets?: DixonMarkets;
     model: 'dixon-coles-elo';
     bucket: 'live' | 'upcoming';
 }

@@ -27,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from tg3d_predict.board_markets import build_markets
 from tg3d_predict.leagues import LEAGUE_ALIASES, resolve_league
 from tg3d_predict.model import LeagueCalibration, PredictorEngine
 from tg3d_predict.offline import load_confidence_curve, load_league_pack, pack_to_bundles
@@ -155,6 +156,13 @@ def predict_batch(payload: dict) -> dict:
                 away_name=away_name,
                 kickoff=m.get("kickoff"),
             )
+            board = build_markets(
+                pred,
+                engine=engine,
+                score=m.get("score"),
+                minute=m.get("minute"),
+                status=m.get("status"),
+            )
             heat = high_goals_score(pred)
             results.append(
                 {
@@ -171,9 +179,9 @@ def predict_batch(payload: dict) -> dict:
                     "minute": m.get("minute"),
                     "score": m.get("score"),
                     "matchedTeams": matched,
-                    "pick": pred.tip,
-                    "confidence": round(pred.tip_prob, 4),
-                    "confidenceRaw": round(pred.tip_prob_raw, 4),
+                    "pick": board["pick"],
+                    "confidence": board["confidence"],
+                    "confidenceRaw": board["confidenceRaw"],
                     "mostLikelyScore": pred.most_likely_score,
                     "potential": goals_potential_label(pred),
                     "heat": round(heat, 4),
@@ -182,15 +190,9 @@ def predict_batch(payload: dict) -> dict:
                         "away": round(pred.lambda_away, 3),
                         "total": round(pred.total_xg, 3),
                     },
-                    "prob": {
-                        "home": round(pred.p_home, 4),
-                        "draw": round(pred.p_draw, 4),
-                        "away": round(pred.p_away, 4),
-                        "over15": round(pred.p_over_15, 4),
-                        "over25": round(pred.p_over_25, 4),
-                        "over35": round(pred.p_over_35, 4),
-                        "btts": round(pred.p_btts, 4),
-                    },
+                    "expectedRemaining": board.get("expectedRemaining"),
+                    "prob": board["prob"],
+                    "markets": board["markets"],
                     "model": "dixon-coles-elo",
                 }
             )

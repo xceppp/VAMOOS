@@ -548,9 +548,11 @@ class PredictorEngine:
         p_under25 = 1.0 - p_over25
         p_under35 = 1.0 - p_over35
 
-        # Goals / BTTS tip only (1X2 is exposed separately on the prediction object)
+        # Goals / BTTS / 1X2 — never tip O0.5 alone (too trivial)
         markets = [
-            ("GOAL IN MATCH (O0.5)", p_over05),
+            ("HOME WIN", p_home),
+            ("DRAW", p_draw),
+            ("AWAY WIN", p_away),
             ("OVER 1.5", p_over15),
             ("UNDER 1.5", p_under15),
             ("OVER 2.5", p_over25),

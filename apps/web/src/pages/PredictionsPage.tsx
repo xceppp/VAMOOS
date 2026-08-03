@@ -17,18 +17,21 @@ function riskOf(p: DixonPick): Risk {
 
 function PickCard({ pick }: { pick: DixonPick }) {
   const risk = riskOf(pick);
-  const scoreBit = pick.score ? ` · ${pick.score}` : '';
-  const minuteBit = pick.minute != null ? ` · ${pick.minute}'` : '';
-  const label = `${pick.pick}${scoreBit}${minuteBit} · ${pick.mostLikelyScore}`;
-
+  const metaBits = [
+    pick.score || null,
+    pick.minute != null ? `${pick.minute}'` : null,
+  ].filter(Boolean);
   const href = pick.liveId ? `/match/${pick.liveId}` : undefined;
 
   return (
     <PredictionCard
       home={pick.home}
       away={pick.away}
-      pick={label}
+      pick={pick.pick}
       confidence={pick.confidence}
+      scoreline={pick.mostLikelyScore}
+      meta={metaBits.join(' · ') || undefined}
+      markets={pick.markets}
       href={href}
       risk={risk}
     />
