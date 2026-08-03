@@ -15,13 +15,21 @@ interface AdSlotProps {
   className?: string;
 }
 
-const CLIENT = (import.meta.env.VITE_ADSENSE_CLIENT as string | undefined)?.trim() || '';
+const CLIENT =
+  (import.meta.env.VITE_ADSENSE_CLIENT as string | undefined)?.trim() ||
+  'ca-pub-5737689254964633';
 
 let scriptLoading: Promise<void> | null = null;
 
 function loadAdSense(): Promise<void> {
   if (!CLIENT || typeof document === 'undefined') return Promise.resolve();
-  if (document.querySelector('script[data-vamoos-adsense]')) return Promise.resolve();
+  // Already present in index.html (or previously injected)
+  if (
+    document.querySelector('script[data-vamoos-adsense]') ||
+    document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]')
+  ) {
+    return Promise.resolve();
+  }
   if (scriptLoading) return scriptLoading;
   scriptLoading = new Promise((resolve) => {
     const s = document.createElement('script');
