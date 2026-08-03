@@ -25,9 +25,9 @@ Ad slots are already placed (top banner + in-feed). To earn:
 3. Copy `apps/web/.env.example` → `apps/web/.env.local` and fill:
 
 ```env
-VITE_ADSENSE_CLIENT=ca-pub-xxxxxxxxxxxxxxxx
-VITE_ADSENSE_SLOT_BANNER=1234567890
-VITE_ADSENSE_SLOT_INFEED=1234567891
+VITE_ADSENSE_CLIENT=ca-pub-5737689254964633
+VITE_ADSENSE_SLOT_BANNER=1197219480
+VITE_ADSENSE_SLOT_INFEED=8417233953
 ```
 
 4. Restart the web app. Placeholders disappear once IDs are set.

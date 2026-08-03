@@ -19,11 +19,25 @@ const CLIENT =
   (import.meta.env.VITE_ADSENSE_CLIENT as string | undefined)?.trim() ||
   'ca-pub-5737689254964633';
 
+/** Display ad — Bloc A */
+const SLOT_BANNER =
+  (import.meta.env.VITE_ADSENSE_SLOT_BANNER as string | undefined)?.trim() || '1197219480';
+
+/** In-feed / fluid ad */
+const SLOT_INFEED =
+  (import.meta.env.VITE_ADSENSE_SLOT_INFEED as string | undefined)?.trim() || '8417233953';
+
+const INFEED_LAYOUT_KEY =
+  (import.meta.env.VITE_ADSENSE_LAYOUT_KEY_INFEED as string | undefined)?.trim() ||
+  '-fb+5w+4e-db+86';
+
+const SLOT_SIDEBAR =
+  (import.meta.env.VITE_ADSENSE_SLOT_SIDEBAR as string | undefined)?.trim() || SLOT_BANNER;
+
 let scriptLoading: Promise<void> | null = null;
 
 function loadAdSense(): Promise<void> {
   if (!CLIENT || typeof document === 'undefined') return Promise.resolve();
-  // Already present in index.html (or previously injected)
   if (
     document.querySelector('script[data-vamoos-adsense]') ||
     document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]')
@@ -44,61 +58,78 @@ function loadAdSense(): Promise<void> {
   return scriptLoading;
 }
 
+function slotFor(format: AdFormat, override?: string): string {
+  if (override?.trim()) return override.trim();
+  if (format === 'infeed') return SLOT_INFEED;
+  if (format === 'sidebar') return SLOT_SIDEBAR;
+  return SLOT_BANNER;
+}
+
 /**
- * Google AdSense slot. Set VITE_ADSENSE_CLIENT + slot ids in env to go live.
- * Without credentials, shows a labeled placeholder so layout/revenue spots stay ready.
+ * Live AdSense units:
+ * - banner / sidebar → auto display (slot 1197219480)
+ * - infeed → fluid in-article (slot 8417233953)
  */
 export function AdSlot({ slot, format = 'banner', className = '' }: AdSlotProps) {
   const { t } = useI18n();
+  const insRef = useRef<HTMLModElement | null>(null);
   const pushed = useRef(false);
-  const slotId =
-    slot ||
-    (format === 'infeed'
-      ? (import.meta.env.VITE_ADSENSE_SLOT_INFEED as string | undefined)?.trim()
-      : format === 'sidebar'
-        ? (import.meta.env.VITE_ADSENSE_SLOT_SIDEBAR as string | undefined)?.trim()
-        : (import.meta.env.VITE_ADSENSE_SLOT_BANNER as string | undefined)?.trim()) ||
-    '';
-
+  const slotId = slotFor(format, slot);
   const live = Boolean(CLIENT && slotId);
 
   useEffect(() => {
     if (!live || pushed.current) return;
     let cancelled = false;
+
     void loadAdSense().then(() => {
       if (cancelled || pushed.current) return;
+      const el = insRef.current;
+      // Avoid double-fill (React StrictMode / remount)
+      if (el?.getAttribute('data-adsbygoogle-status')) {
+        pushed.current = true;
+        return;
+      }
       try {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
         pushed.current = true;
       } catch {
-        /* AdSense may throw if blocked */
+        /* AdSense may throw if blocked or already filled */
       }
     });
+
     return () => {
       cancelled = true;
     };
-  }, [live]);
+  }, [live, slotId, format]);
 
-  if (live) {
-    return (
-      <aside className={`ad-slot ad-slot--${format} ${className}`.trim()} aria-label={t('adLabel')}>
-        <span className="ad-slot__label">{t('adLabel')}</span>
+  if (!live) return null;
+
+  const isInfeed = format === 'infeed';
+
+  return (
+    <aside className={`ad-slot ad-slot--${format} ${className}`.trim()} aria-label={t('adLabel')}>
+      <span className="ad-slot__label">{t('adLabel')}</span>
+      {isInfeed ? (
         <ins
+          ref={insRef}
+          className="adsbygoogle"
+          style={{ display: 'block' }}
+          data-ad-format="fluid"
+          data-ad-layout-key={INFEED_LAYOUT_KEY}
+          data-ad-client={CLIENT}
+          data-ad-slot={slotId}
+        />
+      ) : (
+        <ins
+          ref={insRef}
           className="adsbygoogle"
           style={{ display: 'block' }}
           data-ad-client={CLIENT}
           data-ad-slot={slotId}
-          data-ad-format={format === 'banner' ? 'horizontal' : 'auto'}
+          data-ad-format="auto"
           data-full-width-responsive="true"
         />
-      </aside>
-    );
-  }
-
-  return (
-    <aside className={`ad-slot ad-slot--${format} ad-slot--placeholder ${className}`.trim()}>
-      <span className="ad-slot__label">{t('adLabel')}</span>
-      <p className="ad-slot__placeholder-text">VAMOOS · {t('adLabel')}</p>
+      )}
     </aside>
   );
 }
