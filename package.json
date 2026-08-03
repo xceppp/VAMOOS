@@ -8,8 +8,9 @@
     "dev": "concurrently -n server,web -c green,cyan \"npm run dev:server\" \"npm run dev:web\"",
     "dev:web": "npm run dev --workspace=@tg3d/web",
     "dev:server": "npm run dev --workspace=@tg3d/server",
-    "build": "npm run build --workspace=@tg3d/web && npm run build --workspace=@tg3d/server && node scripts/copy-web.mjs",
+    "build": "npm run build --workspace=@tg3d/web && npm run build --workspace=@tg3d/server && node scripts/copy-web.mjs && node scripts/ensure-python.mjs",
     "start": "node scripts/start-prod.mjs",
+    "ensure-python": "node scripts/ensure-python.mjs",
     "mobile:sync": "npm run cap:sync --workspace=@tg3d/web",
     "mobile:android": "npm run cap:android --workspace=@tg3d/web",
     "mobile:ios": "npm run cap:ios --workspace=@tg3d/web"

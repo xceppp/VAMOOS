@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { fetchFootballFeed, fetchUpcomingFeedMatches, providerIdToNumber, } from './liveFeed.js';
@@ -8,29 +8,50 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CACHE_MS = 45_000;
 let cache = null;
 let resolvedPython;
+function repoRoot() {
+    // apps/server/dist → repo root
+    return resolve(__dirname, '../../..');
+}
 function predictorRoot() {
     return resolve(__dirname, '../../predictor');
 }
-/** Prefer PYTHON_PATH / PYTHON, then python3, python, py -3 (Windows). */
+function readBootstrappedPython() {
+    const marker = resolve(repoRoot(), '.tools/python-bin.txt');
+    if (!existsSync(marker))
+        return null;
+    try {
+        const bin = readFileSync(marker, 'utf8').trim();
+        return bin || null;
+    }
+    catch {
+        return null;
+    }
+}
+/** Prefer PYTHON_PATH / bootstrapped .tools python / python3 / python / py. */
 function pythonBin() {
     if (resolvedPython !== undefined)
         return resolvedPython;
     const fromEnv = process.env.PYTHON_PATH?.trim() || process.env.PYTHON?.trim();
+    const boot = readBootstrappedPython();
     const candidates = [
         ...(fromEnv ? [fromEnv] : []),
+        ...(boot ? [boot] : []),
+        resolve(repoRoot(), '.tools/python/bin/python3'),
+        resolve(repoRoot(), '.tools/python/bin/python'),
         'python3',
         'python',
         'py',
     ];
     for (const bin of candidates) {
-        const args = bin === 'py' ? ['-3', '-c', 'print(1)'] : ['-c', 'print(1)'];
+        const isPyLauncher = bin === 'py' || /(^|[\\/])py(\.exe)?$/i.test(bin);
+        const args = isPyLauncher ? ['-3', '-c', 'print(1)'] : ['-c', 'print(1)'];
         const probe = spawnSync(bin, args, {
             encoding: 'utf8',
             windowsHide: true,
             timeout: 5000,
         });
         if (probe.status === 0) {
-            resolvedPython = bin === 'py' ? 'py' : bin;
+            resolvedPython = isPyLauncher ? 'py' : bin;
             return resolvedPython;
         }
     }
@@ -38,7 +59,6 @@ function pythonBin() {
     return null;
 }
 function pythonArgs(script) {
-    // Windows launcher: py -3 script.py
     if (pythonBin() === 'py')
         return ['-3', script];
     return [script];
@@ -224,7 +244,7 @@ export async function buildDixonBoard(opts) {
     upcoming.sort((a, b) => b.heat - a.heat || b.confidence - a.confidence);
     let notice = null;
     if (batch.error) {
-        notice = `Dixon-Coles engine unavailable (${batch.error}). Host needs Python 3 (use Docker deploy or set PYTHON_PATH).`;
+        notice = `Dixon-Coles engine unavailable (${batch.error}). Host needs Python 3 — start should auto-bootstrap it; check deploy logs for [ensure-python].`;
     }
     else if (!live.length && !upcoming.length) {
         notice =
