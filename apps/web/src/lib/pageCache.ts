@@ -2,53 +2,56 @@
 
 import type { LiveMatch } from '../types';
 
-export interface LatePickCache {
-  matchId: string;
-  liveId?: number;
-  league: string;
-  home: string;
-  away: string;
-  homeLogo?: string;
-  awayLogo?: string;
-  score: string;
-  minute: number;
-  status: string;
-  url: string;
-  pNextGoal: number;
-  pNextCorner: number;
-  call: 'BET' | 'NAH' | 'LEAN BET' | 'LEAN NAH';
-  cornerCall: 'BET' | 'NAH' | 'LEAN BET' | 'LEAN NAH';
-  corners: string;
-  goalRisk: 'green' | 'orange' | 'red';
-  cornerRisk: 'green' | 'orange' | 'red';
-  risk?: 'green' | 'orange' | 'red';
-}
-
-export interface LateScanCache {
-  at: string;
-  liveTotal: number;
-  lateWindowTotal: number;
-  matches?: LatePickCache[];
-  picks: LatePickCache[];
-  watch: LatePickCache[];
-  notice: string | null;
-}
-
 export interface FixturesDayCache {
   dayOffset: number;
   matches: LiveMatch[];
 }
 
-let lateScanCache: LateScanCache | null = null;
+export interface DixonPickCache {
+  id: string;
+  liveId?: number;
+  league: string;
+  slug?: string;
+  home: string;
+  away: string;
+  homeLogo?: string;
+  awayLogo?: string;
+  kickoff?: string | null;
+  status?: string;
+  minute?: number | null;
+  score?: string;
+  matchedTeams?: boolean;
+  pick: string;
+  confidence: number;
+  confidenceRaw?: number;
+  mostLikelyScore: string;
+  potential: string;
+  heat: number;
+  expectedGoals: { home: number; away: number; total: number };
+  prob: {
+    home: number;
+    draw: number;
+    away: number;
+    over15: number;
+    over25: number;
+    over35: number;
+    btts: number;
+  };
+  model: 'dixon-coles-elo';
+  bucket: 'live' | 'upcoming';
+}
+
+export interface DixonBoardCache {
+  at: string;
+  model: 'dixon-coles-elo';
+  live: DixonPickCache[];
+  upcoming: DixonPickCache[];
+  skipped: number;
+  notice: string | null;
+}
+
 let fixturesCache: FixturesDayCache[] | null = null;
-
-export function getLateScanCache(): LateScanCache | null {
-  return lateScanCache;
-}
-
-export function setLateScanCache(scan: LateScanCache): void {
-  lateScanCache = scan;
-}
+let dixonBoardCache: DixonBoardCache | null = null;
 
 export function getFixturesCache(): FixturesDayCache[] | null {
   return fixturesCache;
@@ -56,4 +59,22 @@ export function getFixturesCache(): FixturesDayCache[] | null {
 
 export function setFixturesCache(days: FixturesDayCache[]): void {
   fixturesCache = days;
+}
+
+export function getDixonBoardCache(): DixonBoardCache | null {
+  return dixonBoardCache;
+}
+
+export function setDixonBoardCache(board: DixonBoardCache): void {
+  dixonBoardCache = board;
+}
+
+/** @deprecated kept for older imports */
+export function getLateScanCache(): null {
+  return null;
+}
+
+/** @deprecated */
+export function setLateScanCache(_scan: unknown): void {
+  /* no-op */
 }

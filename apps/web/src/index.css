@@ -432,6 +432,17 @@ input {
   margin: 8px 0 0;
 }
 
+.pred-model-tag {
+  margin: -0.25rem 0 0.85rem;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.pred-bucket-bar {
+  margin-bottom: 14px;
+}
+
 .pred-disclaimer {
   font-size: 11.5px;
   color: var(--text-muted);

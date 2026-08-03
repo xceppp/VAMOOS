@@ -13,6 +13,7 @@ import {
 } from './matchDetail.js';
 import { buildAiscoreAnalysis } from './predictions.js';
 import { scanLateGoalPotential } from './lateGoalScan.js';
+import { buildDixonBoard } from './dixonColes.js';
 import {
   fetchUpcomingFeedMatches,
   findFeedMatch,
@@ -329,6 +330,20 @@ app.get('/api/predictions/late-goals', async (req, res) => {
     console.error('[late-goals]', err);
     res.status(502).json({
       error: err instanceof Error ? err.message : 'Scan failed',
+    });
+  }
+});
+
+/** Dixon-Coles + Elo board for live + upcoming matches (Predictions tab). */
+app.get('/api/predictions/board', async (req, res) => {
+  try {
+    const force = req.query.refresh === '1' || req.query.refresh === 'true';
+    const board = await buildDixonBoard({ force });
+    res.json(board);
+  } catch (err) {
+    console.error('[predictions-board]', err);
+    res.status(502).json({
+      error: err instanceof Error ? err.message : 'Dixon-Coles board failed',
     });
   }
 });
