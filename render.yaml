@@ -1,16 +1,15 @@
 services:
+  # Docker runtime so Python 3 is available for Dixon-Coles predictions.
   - type: web
     name: vamoos
-    runtime: node
+    runtime: docker
     plan: free
-    buildCommand: NPM_CONFIG_PRODUCTION=false npm ci && npm run build
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: NPM_CONFIG_PRODUCTION
-        value: "false"
       - key: LIVE_SOURCE
         value: live
       - key: HOST
         value: 0.0.0.0
+      - key: PYTHON_PATH
+        value: python3

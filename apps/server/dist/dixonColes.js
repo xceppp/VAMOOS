@@ -1,8 +1,4 @@
-/**
- * Dixon-Coles + Elo predictions via the offline Python engine.
- * Used for live + upcoming boards on the Predictions page.
- */
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -11,11 +7,41 @@ import { matchCrowdScore } from './popularity.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CACHE_MS = 45_000;
 let cache = null;
+let resolvedPython;
 function predictorRoot() {
     return resolve(__dirname, '../../predictor');
 }
+/** Prefer PYTHON_PATH / PYTHON, then python3, python, py -3 (Windows). */
 function pythonBin() {
-    return process.env.PYTHON_PATH?.trim() || process.env.PYTHON?.trim() || 'python';
+    if (resolvedPython !== undefined)
+        return resolvedPython;
+    const fromEnv = process.env.PYTHON_PATH?.trim() || process.env.PYTHON?.trim();
+    const candidates = [
+        ...(fromEnv ? [fromEnv] : []),
+        'python3',
+        'python',
+        'py',
+    ];
+    for (const bin of candidates) {
+        const args = bin === 'py' ? ['-3', '-c', 'print(1)'] : ['-c', 'print(1)'];
+        const probe = spawnSync(bin, args, {
+            encoding: 'utf8',
+            windowsHide: true,
+            timeout: 5000,
+        });
+        if (probe.status === 0) {
+            resolvedPython = bin === 'py' ? 'py' : bin;
+            return resolvedPython;
+        }
+    }
+    resolvedPython = null;
+    return null;
+}
+function pythonArgs(script) {
+    // Windows launcher: py -3 script.py
+    if (pythonBin() === 'py')
+        return ['-3', script];
+    return [script];
 }
 function isInPlay(m) {
     return m.status === 'LIVE' || m.status === 'HT' || m.status === 'ET' || m.statusCode === 2;
@@ -25,8 +51,16 @@ async function runPythonBatch(matches) {
     if (!existsSync(script)) {
         return { results: [], skipped: [], error: 'Predictor script missing' };
     }
+    const bin = pythonBin();
+    if (!bin) {
+        return {
+            results: [],
+            skipped: [],
+            error: 'Python not found (ENOENT). Set PYTHON_PATH or deploy with Docker so python3 is installed.',
+        };
+    }
     return new Promise((resolvePromise) => {
-        const child = spawn(pythonBin(), [script], {
+        const child = spawn(bin, pythonArgs(script), {
             cwd: predictorRoot(),
             stdio: ['pipe', 'pipe', 'pipe'],
             env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
@@ -48,10 +82,13 @@ async function runPythonBatch(matches) {
         });
         child.on('error', (err) => {
             clearTimeout(timer);
+            const code = err.code;
             resolvePromise({
                 results: [],
                 skipped: [],
-                error: err.message || 'Failed to start Python',
+                error: code === 'ENOENT'
+                    ? `spawn ${bin} ENOENT — install Python 3 or set PYTHON_PATH`
+                    : err.message || 'Failed to start Python',
             });
         });
         child.on('close', () => {
@@ -187,7 +224,7 @@ export async function buildDixonBoard(opts) {
     upcoming.sort((a, b) => b.heat - a.heat || b.confidence - a.confidence);
     let notice = null;
     if (batch.error) {
-        notice = `Dixon-Coles engine unavailable (${batch.error}). Install Python deps in apps/predictor.`;
+        notice = `Dixon-Coles engine unavailable (${batch.error}). Host needs Python 3 (use Docker deploy or set PYTHON_PATH).`;
     }
     else if (!live.length && !upcoming.length) {
         notice =

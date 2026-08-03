@@ -1,7 +1,3 @@
-/**
- * Dixon-Coles + Elo predictions via the offline Python engine.
- * Used for live + upcoming boards on the Predictions page.
- */
 export interface DixonMarketSide {
     pick: string;
     side?: string;

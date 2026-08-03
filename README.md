@@ -52,11 +52,18 @@ Until AdSense approves you, placeholders keep the layout ready.
 
 ## Deploy (Render / Railway / Docker)
 
-Use **one** web service from the repo root:
+Predictions need **Python 3** (Dixon-Coles). Prefer **Docker**:
+
+- **Dockerfile** installs `python3` and copies `apps/predictor`
+- Set `PYTHON_PATH=python3` if needed
+
+**Render:** use Docker runtime (`render.yaml` already points at the Dockerfile). A plain Node runtime has no Python → `spawn python ENOENT`.
+
+Native Node hosts without Docker:
 
 - **Build:** `npm ci && npm run build`
 - **Start:** `npm start`
-- **Port:** use the host `PORT` env (already supported)
+- Install system Python 3 and set `PYTHON_PATH` to it
 
 If you open the site and see `Cannot GET /`, the build step did not produce the web UI — fix the Build command above (not only `npm start`).
 
