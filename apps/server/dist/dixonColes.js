@@ -1,151 +1,14 @@
-import { spawn, spawnSync } from 'child_process';
-import { existsSync } from 'fs';
-import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
-import { ensurePython, resetPythonCache } from './ensurePython.js';
+/**
+ * Dixon-Coles + Elo predictions board (live + upcoming).
+ * Pure TypeScript engine — no Python on the host.
+ */
 import { fetchFootballFeed, fetchUpcomingFeedMatches, providerIdToNumber, } from './liveFeed.js';
 import { matchCrowdScore } from './popularity.js';
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { runDixonBatch, } from './dixonEngine.js';
 const CACHE_MS = 45_000;
 let cache = null;
-let resolvedPython;
-function predictorRoot() {
-    const candidates = [
-        resolve(__dirname, '../../predictor'),
-        resolve(process.cwd(), 'apps/predictor'),
-        resolve(process.cwd(), 'predictor'),
-    ];
-    for (const dir of candidates) {
-        if (existsSync(resolve(dir, 'serve_batch.py')))
-            return dir;
-    }
-    return candidates[0];
-}
-function syncProbePython() {
-    const fromEnv = process.env.PYTHON_PATH?.trim() || process.env.PYTHON?.trim();
-    const candidates = [
-        ...(fromEnv ? [fromEnv] : []),
-        'python3',
-        'python',
-        'py',
-    ];
-    for (const bin of candidates) {
-        const isPyLauncher = bin === 'py' || /(^|[\\/])py(\.exe)?$/i.test(bin);
-        const args = isPyLauncher ? ['-3', '-c', 'print(1)'] : ['-c', 'print(1)'];
-        const probe = spawnSync(bin, args, {
-            encoding: 'utf8',
-            windowsHide: true,
-            timeout: 5000,
-        });
-        if (probe.status === 0) {
-            return isPyLauncher ? 'py' : bin;
-        }
-    }
-    return null;
-}
-async function pythonBin() {
-    if (resolvedPython !== undefined && resolvedPython !== null)
-        return resolvedPython;
-    if (resolvedPython === null) {
-        // previously missed — still try bootstrap once more via ensurePython
-    }
-    const quick = syncProbePython();
-    if (quick) {
-        resolvedPython = quick;
-        return quick;
-    }
-    resetPythonCache();
-    const boot = await ensurePython();
-    resolvedPython = boot;
-    return boot;
-}
-function pythonArgs(bin, script) {
-    if (bin === 'py')
-        return ['-3', script];
-    return [script];
-}
 function isInPlay(m) {
     return m.status === 'LIVE' || m.status === 'HT' || m.status === 'ET' || m.statusCode === 2;
-}
-async function runPythonBatch(matches) {
-    const script = resolve(predictorRoot(), 'serve_batch.py');
-    if (!existsSync(script)) {
-        return {
-            results: [],
-            skipped: [],
-            error: `Predictor script missing at ${script}`,
-        };
-    }
-    const bin = await pythonBin();
-    if (!bin) {
-        return {
-            results: [],
-            skipped: [],
-            error: 'Python not found after bootstrap. Check deploy logs for [ensure-python] download/extract errors.',
-        };
-    }
-    return new Promise((resolvePromise) => {
-        const child = spawn(bin, pythonArgs(bin, script), {
-            cwd: predictorRoot(),
-            stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env, PYTHON_PATH: bin, PYTHONIOENCODING: 'utf-8' },
-            windowsHide: true,
-        });
-        let stdout = '';
-        let stderr = '';
-        const timer = setTimeout(() => {
-            child.kill();
-            resolvePromise({ results: [], skipped: [], error: 'Predictor timed out' });
-        }, 90_000);
-        child.stdout.setEncoding('utf8');
-        child.stderr.setEncoding('utf8');
-        child.stdout.on('data', (chunk) => {
-            stdout += chunk;
-        });
-        child.stderr.on('data', (chunk) => {
-            stderr += chunk;
-        });
-        child.on('error', (err) => {
-            clearTimeout(timer);
-            resolvedPython = undefined;
-            const code = err.code;
-            resolvePromise({
-                results: [],
-                skipped: [],
-                error: code === 'ENOENT'
-                    ? `spawn ${bin} ENOENT — bootstrap path invalid`
-                    : err.message || 'Failed to start Python',
-            });
-        });
-        child.on('close', () => {
-            clearTimeout(timer);
-            try {
-                const parsed = JSON.parse(stdout || '{}');
-                if (parsed.error) {
-                    resolvePromise({
-                        results: [],
-                        skipped: parsed.skipped ?? [],
-                        error: parsed.error,
-                    });
-                    return;
-                }
-                resolvePromise({
-                    results: Array.isArray(parsed.results) ? parsed.results : [],
-                    skipped: Array.isArray(parsed.skipped) ? parsed.skipped : [],
-                    error: stderr && !parsed.results?.length ? stderr.slice(0, 200) : undefined,
-                });
-            }
-            catch {
-                resolvePromise({
-                    results: [],
-                    skipped: [],
-                    error: stderr.trim() || 'Invalid predictor output',
-                });
-            }
-        });
-        child.stdin.write(JSON.stringify({ matches }));
-        child.stdin.end();
-    });
 }
 function riskFromConfidence(c) {
     if (c >= 0.58)
@@ -170,7 +33,6 @@ export async function buildDixonBoard(opts) {
         awayName: input.awayName,
     }), 2);
     const upcomingLive = [];
-    // Prefer raw feed NS matches for today (richer league names) + convert upcoming days
     for (const m of liveFeed) {
         if (m.status === 'NS')
             upcomingLive.push(m);
@@ -194,7 +56,6 @@ export async function buildDixonBoard(opts) {
             score: `${m.homeGoals}-${m.awayGoals}`,
         });
     }
-    // Upcoming from fixtures API days (already LiveMatch[]) — map back to names
     for (const day of upcomingPack.days) {
         for (const m of day.matches.slice(0, 40)) {
             const id = m.providerId || String(m.id);
@@ -216,7 +77,6 @@ export async function buildDixonBoard(opts) {
             });
         }
     }
-    // Also include NS from today's live feed not already in upcoming
     for (const m of upcomingLive.slice(0, 40)) {
         if (bucketById.has(m.id))
             continue;
@@ -235,12 +95,12 @@ export async function buildDixonBoard(opts) {
             score: null,
         });
     }
-    const batch = await runPythonBatch(payload);
+    const batch = runDixonBatch(payload);
     const live = [];
     const upcoming = [];
     for (const r of batch.results) {
         const bucket = bucketById.get(r.id) ?? 'upcoming';
-        const pick = { ...r, bucket, model: 'dixon-coles-elo' };
+        const pick = { ...r, bucket };
         if (bucket === 'live')
             live.push(pick);
         else
