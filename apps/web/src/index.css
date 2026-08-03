@@ -46,6 +46,10 @@ input {
   max-width: 1180px;
 }
 
+.keep-alive-pane[hidden] {
+  display: none !important;
+}
+
 .ambient {
   position: fixed;
   inset: 0;

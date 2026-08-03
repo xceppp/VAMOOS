@@ -64,7 +64,9 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
   const matchId = Number(id);
   const [data, setData] = useState<MatchDetailPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => !Number.isFinite(matchId) || !liveMatches.some((m) => m.id === matchId),
+  );
   const [statTab, setStatTab] = useState(0);
 
   const liveHint = useMemo(
@@ -80,9 +82,11 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
     }
 
     let cancelled = false;
+    const hasHint = liveMatches.some((m) => m.id === matchId);
 
     const load = (soft = false) => {
-      if (!soft) {
+      // Never blank the scoreboard when we already have live data for this match.
+      if (!soft && !hasHint && !data) {
         setLoading(true);
         setError(null);
       }
@@ -95,22 +99,28 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
           return res.json() as Promise<MatchDetailPayload>;
         })
         .then((payload) => {
-          if (!cancelled) setData(payload);
+          if (!cancelled) {
+            setData(payload);
+            setError(null);
+          }
         })
         .catch((err: unknown) => {
-          if (!cancelled && !soft) setError(err instanceof Error ? err.message : 'Failed to load');
+          if (!cancelled && !soft && !hasHint) {
+            setError(err instanceof Error ? err.message : 'Failed to load');
+          }
         })
         .finally(() => {
           if (!cancelled) setLoading(false);
         });
     };
 
-    load(false);
-    const timer = window.setInterval(() => load(true), 8_000);
+    load(hasHint);
+    const timer = window.setInterval(() => load(true), 12_000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when match id changes
   }, [matchId]);
 
   // Prefer live WS scoreboard when present — detail payload can lag behind a goal/FT.
@@ -199,7 +209,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
             <p className="detail-hero__info">
               {[data?.venue, data?.city].filter(Boolean).join(', ') || t('liveMatchStats')}
               {data?.referee ? ` · ${data.referee}` : ''}
-              {loading ? ` · ${t('loading')}` : ` · ${t('autoRefresh')}`}
+              {data ? ` · ${t('autoRefresh')}` : ''}
             </p>
           </header>
 

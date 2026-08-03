@@ -3,6 +3,7 @@ import { MatchCard } from '../components/MatchCard';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
 import { groupMatchesByLeagueKickoff } from '../lib/leagues';
+import { getFixturesCache, setFixturesCache } from '../lib/pageCache';
 import type { LiveMatch } from '../types';
 
 const UPCOMING_DAYS = 4;
@@ -37,8 +38,10 @@ function dayLabel(
 export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
   const { t, lang } = useI18n();
   const [dayOffset, setDayOffset] = useState(0);
-  const [fixtureDays, setFixtureDays] = useState<FixturesDay[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fixtureDays, setFixtureDays] = useState<FixturesDay[]>(
+    () => getFixturesCache() ?? [],
+  );
+  const [loading, setLoading] = useState(() => !getFixturesCache()?.length);
   const [error, setError] = useState(false);
 
   const activeUpcoming = useMemo(() => {
@@ -54,7 +57,7 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
   useEffect(() => {
     let cancelled = false;
     const load = async (soft = false) => {
-      if (!soft) {
+      if (!soft && !getFixturesCache()?.length) {
         setLoading(true);
         setError(false);
       }
@@ -65,11 +68,13 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
         if (!res.ok) throw new Error(`fixtures ${res.status}`);
         const data = (await res.json()) as { days?: FixturesDay[] };
         if (!cancelled) {
-          setFixtureDays(Array.isArray(data.days) ? data.days : []);
+          const days = Array.isArray(data.days) ? data.days : [];
+          setFixturesCache(days);
+          setFixtureDays(days);
           setError(false);
         }
       } catch {
-        if (!cancelled && !soft) {
+        if (!cancelled && !soft && !getFixturesCache()?.length) {
           setError(true);
           setFixtureDays([]);
         }
@@ -77,7 +82,7 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
         if (!cancelled) setLoading(false);
       }
     };
-    void load(false);
+    void load(Boolean(getFixturesCache()?.length));
     const timer = window.setInterval(() => void load(true), 90_000);
     return () => {
       cancelled = true;
@@ -87,10 +92,7 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
 
   return (
     <section className="page">
-      <div className="page__intro">
-        <h1>{t('upcomingTitle')}</h1>
-        <p>{t('upcomingIntro')}</p>
-      </div>
+      <p className="section-label">{t('upcomingTitle')}</p>
 
       <div className="day-bar" role="tablist" aria-label={t('upcomingDaysAria')}>
         {Array.from({ length: UPCOMING_DAYS }, (_, offset) => (
@@ -111,21 +113,28 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
       </div>
 
       {loading && !fixtureDays.length ? (
-        <p className="empty">{t('upcomingLoading')}</p>
+        <div className="empty">
+          <i className="ti ti-clock" aria-hidden />
+          <p>{t('upcomingLoading')}</p>
+        </div>
       ) : error && !fixtureDays.length ? (
-        <p className="empty">{t('upcomingError')}</p>
+        <div className="empty">
+          <p>{t('upcomingError')}</p>
+        </div>
       ) : !activeUpcoming.length ? (
-        <p className="empty">{t('noUpcoming')}</p>
+        <div className="empty">
+          <p>{t('noUpcoming')}</p>
+        </div>
       ) : (
         upcomingGrouped.map((block) => (
           <section key={block.key} className="league-block league-block--upcoming">
-            <h2>
+            <p className="section-label">
               {block.logo ? (
-                <img src={block.logo} alt="" className="league-crest" width={18} height={18} />
+                <img src={block.logo} alt="" className="league-crest" width={14} height={14} />
               ) : null}
               {block.name}
               {block.country ? <em className="league-country">{block.country}</em> : null}
-            </h2>
+            </p>
             <div className="match-list">
               {block.matches.map((m) => (
                 <MatchCard

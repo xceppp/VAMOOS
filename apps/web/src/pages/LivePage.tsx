@@ -70,10 +70,14 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
       {mode === 'demo' ? <p className="section-label">{t('liveDemo')}</p> : null}
 
       {!liveMatches.length ? (
-        <div className="empty">
-          <i className="ti ti-ball-football" aria-hidden />
-          <p>{mode === 'connecting' ? t('connecting') : t('noLive')}</p>
-        </div>
+        mode === 'connecting' ? (
+          <p className="section-label">{t('connecting')}</p>
+        ) : (
+          <div className="empty">
+            <i className="ti ti-ball-football" aria-hidden />
+            <p>{t('noLive')}</p>
+          </div>
+        )
       ) : sort === 'ending' ? (
         <div className="match-list">
           <p className="section-label">{t('sortEnding')}</p>

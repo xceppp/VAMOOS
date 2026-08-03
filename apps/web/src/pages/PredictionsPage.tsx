@@ -3,40 +3,12 @@ import { AdSlot } from '../components/AdSlot';
 import { PredictionCard } from '../components/PredictionCard';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
+import { getLateScanCache, setLateScanCache, type LateScanCache } from '../lib/pageCache';
 
 type Risk = 'green' | 'orange' | 'red';
 
-interface LatePick {
-  matchId: string;
-  liveId?: number;
-  league: string;
-  home: string;
-  away: string;
-  homeLogo?: string;
-  awayLogo?: string;
-  score: string;
-  minute: number;
-  status: string;
-  url: string;
-  pNextGoal: number;
-  pNextCorner: number;
-  call: 'BET' | 'NAH' | 'LEAN BET' | 'LEAN NAH';
-  cornerCall: 'BET' | 'NAH' | 'LEAN BET' | 'LEAN NAH';
-  corners: string;
-  goalRisk: Risk;
-  cornerRisk: Risk;
-  risk?: Risk;
-}
-
-interface LateScan {
-  at: string;
-  liveTotal: number;
-  lateWindowTotal: number;
-  matches?: LatePick[];
-  picks: LatePick[];
-  watch: LatePick[];
-  notice: string | null;
-}
+type LatePick = NonNullable<LateScanCache['matches']>[number];
+type LateScan = LateScanCache;
 
 function riskOf(p: LatePick): Risk {
   return p.risk ?? p.goalRisk ?? 'red';
@@ -77,33 +49,39 @@ function MatchRow({ pick }: { pick: LatePick }) {
 
 export function PredictionsPage() {
   const { t, lang } = useI18n();
-  const [scan, setScan] = useState<LateScan | null>(null);
+  const [scan, setScan] = useState<LateScan | null>(() => getLateScanCache());
   const [scanBusy, setScanBusy] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | Risk>('all');
   const [query, setQuery] = useState('');
 
   const loadScan = useCallback(async (force = false, soft = false) => {
-    // Soft background refresh: keep showing previous tips — no busy flicker.
-    if (!soft) {
+    const hasCache = Boolean(getLateScanCache());
+    // Only show busy on manual refresh, or the very first load with no cache.
+    if (!soft && !hasCache) {
       setScanBusy(true);
       setScanError(null);
+    } else if (!soft && force && hasCache) {
+      setScanBusy(true);
     }
     try {
       const q = force ? '?refresh=1&minMinute=75' : '?minMinute=75';
       const res = await fetch(apiUrl(`/api/predictions/late-goals${q}`));
       const json = (await res.json()) as LateScan & { error?: string };
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setLateScanCache(json);
       setScan(json);
+      setScanError(null);
     } catch (err) {
-      if (!soft) setScanError(err instanceof Error ? err.message : 'Scan failed');
+      if (!soft && !hasCache) setScanError(err instanceof Error ? err.message : 'Scan failed');
     } finally {
-      if (!soft) setScanBusy(false);
+      setScanBusy(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadScan(true, false);
+    // Soft if we already have cached tips — never blank the page on mount.
+    void loadScan(true, Boolean(getLateScanCache()));
     const id = window.setInterval(() => void loadScan(false, true), 20_000);
     return () => window.clearInterval(id);
   }, [loadScan]);
@@ -188,9 +166,9 @@ export function PredictionsPage() {
               time: new Date(scan.at).toLocaleTimeString(lang === 'ar' ? 'ar' : 'en'),
             })}
           </p>
-        ) : (
-          <p className="pred-meta">{t('predLoading')}</p>
-        )}
+        ) : scanBusy ? (
+          <p className="pred-meta muted">{t('predLoading')}</p>
+        ) : null}
       </div>
 
       {scanError ? <p className="predict-error">{scanError}</p> : null}
@@ -205,7 +183,7 @@ export function PredictionsPage() {
         ))}
       </div>
 
-      {!scanBusy && visible.length === 0 ? (
+      {!scanBusy && scan && visible.length === 0 ? (
         <p className="pred-empty">
           {query.trim()
             ? t('predEmptySearch', { q: query.trim() })

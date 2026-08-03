@@ -1,5 +1,12 @@
-import { useCallback, useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import { AudioGate } from './components/AudioGate';
 import { GoalAlertBar } from './components/GoalAlertBar';
 import { Layout } from './components/Layout';
@@ -19,6 +26,111 @@ import { PredictionsPage } from './pages/PredictionsPage';
 import { UpcomingPage } from './pages/UpcomingPage';
 import { ThemeProvider } from './theme/ThemeProvider';
 
+/** Keep tab pages mounted so revisiting never flashes a loading state. */
+function KeepAlivePane({
+  active,
+  mounted,
+  children,
+}: {
+  active: boolean;
+  mounted: boolean;
+  children: ReactNode;
+}) {
+  if (!mounted) return null;
+  return (
+    <div className="keep-alive-pane" hidden={!active} aria-hidden={!active}>
+      {children}
+    </div>
+  );
+}
+
+function TabHost({
+  matches,
+  displayMode,
+  isFav,
+  toggle,
+  ids,
+  pulseId,
+}: {
+  matches: ReturnType<typeof useLiveSocket>['matches'];
+  displayMode: string;
+  isFav: (id: number) => boolean;
+  toggle: (id: number) => void;
+  ids: number[];
+  pulseId: number | null;
+}) {
+  const { pathname } = useLocation();
+
+  const active =
+    pathname === '/predictions'
+      ? 'predictions'
+      : pathname === '/favorites'
+        ? 'favorites'
+        : pathname === '/upcoming'
+          ? 'upcoming'
+          : pathname === '/notify' || pathname === '/settings'
+            ? 'notify'
+            : pathname === '/leagues' || pathname.startsWith('/leagues/')
+              ? 'leagues'
+              : 'live';
+
+  const [mounted, setMounted] = useState({
+    live: true,
+    predictions: false,
+    favorites: false,
+    upcoming: false,
+    notify: false,
+    leagues: false,
+  });
+
+  useEffect(() => {
+    setMounted((m) => {
+      if (m[active as keyof typeof m]) return m;
+      return { ...m, [active]: true };
+    });
+  }, [active]);
+
+  return (
+    <>
+      <KeepAlivePane active={active === 'live'} mounted={mounted.live}>
+        <LivePage
+          matches={matches}
+          mode={displayMode}
+          isFav={isFav}
+          onToggle={toggle}
+          pulseId={pulseId}
+        />
+      </KeepAlivePane>
+      <KeepAlivePane active={active === 'predictions'} mounted={mounted.predictions}>
+        <PredictionsPage />
+      </KeepAlivePane>
+      <KeepAlivePane active={active === 'favorites'} mounted={mounted.favorites}>
+        <FavoritesPage
+          matches={matches}
+          favoriteIds={ids}
+          isFav={isFav}
+          onToggle={toggle}
+          pulseId={pulseId}
+        />
+      </KeepAlivePane>
+      <KeepAlivePane active={active === 'upcoming'} mounted={mounted.upcoming}>
+        <UpcomingPage isFav={isFav} onToggle={toggle} />
+      </KeepAlivePane>
+      <KeepAlivePane active={active === 'notify'} mounted={mounted.notify}>
+        <NotifyPage />
+      </KeepAlivePane>
+      <KeepAlivePane active={active === 'leagues'} mounted={mounted.leagues}>
+        <LeaguesPage
+          matches={matches}
+          isFav={isFav}
+          onToggle={toggle}
+          pulseId={pulseId}
+        />
+      </KeepAlivePane>
+    </>
+  );
+}
+
 function AppRoutes() {
   const navigate = useNavigate();
   const { matches, mode, connected, rateLimited, notice, lastEvent, eventVersion } = useLiveSocket();
@@ -35,7 +147,6 @@ function AppRoutes() {
     void reloadAudioFromDb();
   }, []);
 
-  // Debounce watch updates so starring doesn't hammer the server / UI.
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void fetch(apiUrl('/api/watch'), {
@@ -80,48 +191,6 @@ function AppRoutes() {
       >
         <Routes>
           <Route
-            path="/"
-            element={
-              <LivePage
-                matches={matches}
-                mode={displayMode}
-                isFav={isFav}
-                onToggle={toggle}
-                pulseId={pulseId}
-              />
-            }
-          />
-          <Route
-            path="/leagues"
-            element={
-              <LeaguesPage
-                matches={matches}
-                isFav={isFav}
-                onToggle={toggle}
-                pulseId={pulseId}
-              />
-            }
-          />
-          <Route
-            path="/favorites"
-            element={
-              <FavoritesPage
-                matches={matches}
-                favoriteIds={ids}
-                isFav={isFav}
-                onToggle={toggle}
-                pulseId={pulseId}
-              />
-            }
-          />
-          <Route
-            path="/upcoming"
-            element={<UpcomingPage isFav={isFav} onToggle={toggle} />}
-          />
-          <Route path="/notify" element={<NotifyPage />} />
-          <Route path="/settings" element={<Navigate to="/notify" replace />} />
-          <Route path="/predictions" element={<PredictionsPage />} />
-          <Route
             path="/match/:id"
             element={
               <MatchDetailPage
@@ -131,7 +200,20 @@ function AppRoutes() {
               />
             }
           />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/settings" element={<Navigate to="/notify" replace />} />
+          <Route
+            path="*"
+            element={
+              <TabHost
+                matches={matches}
+                displayMode={displayMode}
+                isFav={isFav}
+                toggle={toggle}
+                ids={ids}
+                pulseId={pulseId}
+              />
+            }
+          />
         </Routes>
       </Layout>
       <ToastStack toasts={toasts} onDismiss={dismiss} />
