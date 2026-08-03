@@ -1,7 +1,8 @@
 import { spawn, spawnSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { ensurePython, resetPythonCache } from './ensurePython.js';
 import {
   fetchFootballFeed,
   fetchUpcomingFeedMatches,
@@ -86,37 +87,22 @@ const CACHE_MS = 45_000;
 let cache: { at: number; data: DixonBoard } | null = null;
 let resolvedPython: string | null | undefined;
 
-function repoRoot(): string {
-  // apps/server/dist → repo root
-  return resolve(__dirname, '../../..');
-}
-
 function predictorRoot(): string {
-  return resolve(__dirname, '../../predictor');
-}
-
-function readBootstrappedPython(): string | null {
-  const marker = resolve(repoRoot(), '.tools/python-bin.txt');
-  if (!existsSync(marker)) return null;
-  try {
-    const bin = readFileSync(marker, 'utf8').trim();
-    return bin || null;
-  } catch {
-    return null;
+  const candidates = [
+    resolve(__dirname, '../../predictor'),
+    resolve(process.cwd(), 'apps/predictor'),
+    resolve(process.cwd(), 'predictor'),
+  ];
+  for (const dir of candidates) {
+    if (existsSync(resolve(dir, 'serve_batch.py'))) return dir;
   }
+  return candidates[0];
 }
 
-/** Prefer PYTHON_PATH / bootstrapped .tools python / python3 / python / py. */
-function pythonBin(): string | null {
-  if (resolvedPython !== undefined) return resolvedPython;
-
+function syncProbePython(): string | null {
   const fromEnv = process.env.PYTHON_PATH?.trim() || process.env.PYTHON?.trim();
-  const boot = readBootstrappedPython();
   const candidates = [
     ...(fromEnv ? [fromEnv] : []),
-    ...(boot ? [boot] : []),
-    resolve(repoRoot(), '.tools/python/bin/python3'),
-    resolve(repoRoot(), '.tools/python/bin/python'),
     'python3',
     'python',
     'py',
@@ -131,17 +117,32 @@ function pythonBin(): string | null {
       timeout: 5000,
     });
     if (probe.status === 0) {
-      resolvedPython = isPyLauncher ? 'py' : bin;
-      return resolvedPython;
+      return isPyLauncher ? 'py' : bin;
     }
   }
-
-  resolvedPython = null;
   return null;
 }
 
-function pythonArgs(script: string): string[] {
-  if (pythonBin() === 'py') return ['-3', script];
+async function pythonBin(): Promise<string | null> {
+  if (resolvedPython !== undefined && resolvedPython !== null) return resolvedPython;
+  if (resolvedPython === null) {
+    // previously missed — still try bootstrap once more via ensurePython
+  }
+
+  const quick = syncProbePython();
+  if (quick) {
+    resolvedPython = quick;
+    return quick;
+  }
+
+  resetPythonCache();
+  const boot = await ensurePython();
+  resolvedPython = boot;
+  return boot;
+}
+
+function pythonArgs(bin: string, script: string): string[] {
+  if (bin === 'py') return ['-3', script];
   return [script];
 }
 
@@ -158,24 +159,28 @@ async function runPythonBatch(
 }> {
   const script = resolve(predictorRoot(), 'serve_batch.py');
   if (!existsSync(script)) {
-    return { results: [], skipped: [], error: 'Predictor script missing' };
+    return {
+      results: [],
+      skipped: [],
+      error: `Predictor script missing at ${script}`,
+    };
   }
 
-  const bin = pythonBin();
+  const bin = await pythonBin();
   if (!bin) {
     return {
       results: [],
       skipped: [],
       error:
-        'Python not found (ENOENT). Set PYTHON_PATH or deploy with Docker so python3 is installed.',
+        'Python not found after bootstrap. Check deploy logs for [ensure-python] download/extract errors.',
     };
   }
 
   return new Promise((resolvePromise) => {
-    const child = spawn(bin, pythonArgs(script), {
+    const child = spawn(bin, pythonArgs(bin, script), {
       cwd: predictorRoot(),
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+      env: { ...process.env, PYTHON_PATH: bin, PYTHONIOENCODING: 'utf-8' },
       windowsHide: true,
     });
 
@@ -184,7 +189,7 @@ async function runPythonBatch(
     const timer = setTimeout(() => {
       child.kill();
       resolvePromise({ results: [], skipped: [], error: 'Predictor timed out' });
-    }, 45_000);
+    }, 90_000);
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
@@ -196,13 +201,14 @@ async function runPythonBatch(
     });
     child.on('error', (err) => {
       clearTimeout(timer);
+      resolvedPython = undefined;
       const code = (err as NodeJS.ErrnoException).code;
       resolvePromise({
         results: [],
         skipped: [],
         error:
           code === 'ENOENT'
-            ? `spawn ${bin} ENOENT — install Python 3 or set PYTHON_PATH`
+            ? `spawn ${bin} ENOENT — bootstrap path invalid`
             : err.message || 'Failed to start Python',
       });
     });
@@ -354,7 +360,7 @@ export async function buildDixonBoard(opts?: { force?: boolean }): Promise<Dixon
 
   let notice: string | null = null;
   if (batch.error) {
-    notice = `Dixon-Coles engine unavailable (${batch.error}). Host needs Python 3 — start should auto-bootstrap it; check deploy logs for [ensure-python].`;
+    notice = `Dixon-Coles engine unavailable (${batch.error})`;
   } else if (!live.length && !upcoming.length) {
     notice =
       batch.skipped.length > 0

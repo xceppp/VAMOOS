@@ -14,6 +14,7 @@ import {
 import { buildAiscoreAnalysis } from './predictions.js';
 import { scanLateGoalPotential } from './lateGoalScan.js';
 import { buildDixonBoard } from './dixonColes.js';
+import { ensurePython } from './ensurePython.js';
 import {
   fetchUpcomingFeedMatches,
   findFeedMatch,
@@ -385,4 +386,8 @@ server.listen(PORT, HOST, () => {
   } else {
     console.warn('[server] web UI missing — run `npm run build` so / serves the app');
   }
+  void ensurePython().then((bin) => {
+    if (bin) console.log(`[server] Dixon-Coles Python ready: ${bin}`);
+    else console.warn('[server] Dixon-Coles Python unavailable — predictions will fail until bootstrap works');
+  });
 });
