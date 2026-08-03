@@ -1,5 +1,6 @@
 services:
-  # Docker runtime so Python 3 is available for Dixon-Coles predictions.
+  # Prefer Docker (Python + Node). If the service stays on Node runtime,
+  # Railway Nixpacks (nixpacks.toml) still installs python3.
   - type: web
     name: vamoos
     runtime: docker

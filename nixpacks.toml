@@ -1,9 +1,12 @@
 [variables]
 NODE_ENV = "production"
 NPM_CONFIG_PRODUCTION = "false"
+PYTHON_PATH = "python3"
+LIVE_SOURCE = "live"
 
 [phases.setup]
-nixPkgs = ["nodejs_22"]
+# python3 required for Dixon-Coles Predictions board
+nixPkgs = ["nodejs_22", "python3"]
 
 [phases.install]
 cmds = ["NPM_CONFIG_PRODUCTION=false npm ci"]
