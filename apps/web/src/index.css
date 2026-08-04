@@ -739,9 +739,9 @@ input {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.55);
-  color: var(--ink);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
   border-radius: 999px;
   padding: 0.45rem 0.75rem;
   font-size: 0.78rem;
@@ -751,13 +751,13 @@ input {
 }
 
 .day-bar__btn:hover {
-  border-color: rgba(18, 21, 26, 0.22);
+  border-color: var(--border-strong);
 }
 
 .day-bar__btn--on {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold-text);
 }
 
 .day-bar__count {
@@ -1300,9 +1300,9 @@ html[dir='rtl'] .detail-hero__team--away {
 }
 
 .stat-tabs__btn {
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--ink-soft);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
   border-radius: 999px;
   padding: 0.4rem 0.75rem;
   font-size: 0.78rem;
@@ -1312,9 +1312,9 @@ html[dir='rtl'] .detail-hero__team--away {
 }
 
 .stat-tabs__btn.is-on {
-  background: var(--pitch);
-  border-color: var(--pitch);
-  color: #f4ffe8;
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold-text);
 }
 
 .stat-row__values {
@@ -2094,9 +2094,9 @@ html[dir='rtl'] .detail-hero__team--away {
 
 .pred-search {
   width: 100%;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--ink);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
   border-radius: 12px;
   padding: 0.75rem 0.95rem;
   font: inherit;
@@ -2105,9 +2105,13 @@ html[dir='rtl'] .detail-hero__team--away {
   outline: none;
 }
 
+.pred-search::placeholder {
+  color: var(--text-muted);
+}
+
 .pred-search:focus {
-  border-color: var(--pitch-bright);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pitch-bright) 16%, transparent);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
 }
 
 .pred-filters {
@@ -2123,9 +2127,9 @@ html[dir='rtl'] .detail-hero__team--away {
 
 .pred-filter {
   flex: 0 0 auto;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--ink-soft);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
   border-radius: 999px;
   padding: 0.45rem 0.85rem;
   font-size: 0.82rem;
@@ -2135,32 +2139,33 @@ html[dir='rtl'] .detail-hero__team--away {
 }
 
 .pred-filter.is-on {
-  color: var(--ink);
-  border-color: var(--pitch);
+  color: var(--text);
+  border-color: var(--gold);
+  background: var(--gold-soft);
 }
 
 .pred-filter--green.is-on {
-  background: #e7f7ec;
-  border-color: #2f9e57;
-  color: #14532d;
+  background: rgba(47, 158, 87, 0.18);
+  border-color: #3ecf6a;
+  color: #9aefb3;
 }
 
 .pred-filter--orange.is-on {
-  background: #fff1e0;
-  border-color: #d97706;
-  color: #7c2d12;
+  background: rgba(217, 119, 6, 0.18);
+  border-color: #f0a14a;
+  color: #ffd19a;
 }
 
 .pred-filter--red.is-on {
-  background: #fde8e6;
-  border-color: #c0392b;
-  color: #7f1d1d;
+  background: rgba(192, 57, 43, 0.18);
+  border-color: #e5736a;
+  color: #ffb4ad;
 }
 
 .pred-meta {
   margin: 0;
   font-size: 0.78rem;
-  color: var(--ink-soft);
+  color: var(--text-secondary);
   font-weight: 600;
 }
 
@@ -2168,10 +2173,10 @@ html[dir='rtl'] .detail-hero__team--away {
   margin: 0 0 0.75rem;
   padding: 0.65rem 0.8rem;
   border-radius: 10px;
-  background: #fff;
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--border);
   font-size: 0.88rem;
-  color: var(--ink-soft);
+  color: var(--text-secondary);
 }
 
 .pred-list {
@@ -2187,16 +2192,16 @@ html[dir='rtl'] .detail-hero__team--away {
   gap: 0.65rem 0.75rem;
   padding: 0.75rem 0.85rem;
   border-radius: 12px;
-  background: #fff;
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-left-width: 4px;
   text-decoration: none;
-  color: inherit;
+  color: var(--text);
   transition: background 0.12s ease;
 }
 
 .pred-row:hover {
-  background: #f7f8fa;
+  background: var(--surface-2);
 }
 
 .pred-row--green {
@@ -2897,4 +2902,136 @@ html[dir='rtl'] .detail-hero__team--away {
 .predict-notes {
   margin-top: 0.85rem;
   font-size: 0.85rem;
+}
+
+/* Dark-only readability: kill leftover light-theme hardcodes */
+.sort-bar__btn,
+.league-search input,
+.btn--ghost,
+.icon-btn,
+.settings-toggle,
+.match-card,
+.pred-card,
+.empty,
+.section-label,
+.muted,
+.pred-disclaimer,
+.pred-empty,
+.pred-model-tag,
+.conn,
+.topbar,
+.logo-text,
+.main,
+.page {
+  color: inherit;
+}
+
+.sort-bar__btn {
+  background: var(--surface) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border) !important;
+}
+
+.sort-bar__btn--on,
+.sort-bar__btn.is-on {
+  color: var(--gold-text) !important;
+  border-color: var(--gold) !important;
+  background: var(--gold-soft) !important;
+}
+
+.league-search input,
+input[type='search'],
+input[type='text'],
+textarea {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+.league-search input::placeholder,
+input::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+
+.btn--ghost {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.lang-toggle button {
+  color: var(--text-secondary);
+}
+
+.lang-toggle button.active {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.section-label,
+.muted,
+.pred-disclaimer,
+.pred-empty,
+.pred-model-tag,
+.empty,
+.pred-meta {
+  color: var(--text-secondary) !important;
+}
+
+.match-card,
+.pred-card,
+.fav-card,
+.settings__panel,
+.settings__song {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.match-card__league,
+.match-card__meta,
+.kickoff-time,
+.stat-row__values span,
+.timeline__item,
+.pred-card__match,
+.pred-card__scoreline,
+.pred-card__market-label {
+  color: var(--text-secondary) !important;
+}
+
+.pred-card__pick,
+.pred-card__market-value,
+.match-card__team,
+.brand__mark,
+.logo-text {
+  color: var(--text) !important;
+}
+
+.pred-card__pct,
+.pred-card__market-prob,
+.score,
+.score-num {
+  color: var(--gold-text) !important;
+}
+
+.risk-badge--green,
+.pred-filter--green.is-on {
+  background: rgba(47, 158, 87, 0.18) !important;
+  color: #9aefb3 !important;
+  border-color: #3ecf6a !important;
+}
+
+.risk-badge--orange,
+.pred-filter--orange.is-on {
+  background: rgba(217, 119, 6, 0.18) !important;
+  color: #ffd19a !important;
+  border-color: #f0a14a !important;
+}
+
+.risk-badge--red,
+.pred-filter--red.is-on {
+  background: rgba(192, 57, 43, 0.18) !important;
+  color: #ffb4ad !important;
+  border-color: #e5736a !important;
 }

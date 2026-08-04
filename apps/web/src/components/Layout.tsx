@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
-import { useTheme } from '../theme/ThemeProvider';
 import { AdSlot } from './AdSlot';
 import { TabNav, type TabItem } from './TabNav';
 
@@ -14,7 +13,6 @@ interface LayoutProps {
 
 export function Layout({ children, mode, connected, rateLimited, notice }: LayoutProps) {
   const { t, lang, setLang } = useI18n();
-  const { theme, toggleTheme } = useTheme();
 
   const tabs: TabItem[] = [
     { to: '/', label: t('navLive'), short: t('navLiveShort'), end: true },
@@ -60,15 +58,6 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
               AR
             </button>
           </div>
-
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? t('themeLight') : t('themeDark')}
-          >
-            <i className={theme === 'dark' ? 'ti ti-moon' : 'ti ti-sun'} aria-hidden />
-          </button>
 
           <div className="conn" title={connected ? modeLabel : t('reconnecting')}>
             <span className={`dot${connected ? (rateLimited ? ' dot--warn' : ' dot--on') : ''}`} />
