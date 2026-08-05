@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
 import AttackPitch from '../components/AttackPitch';
@@ -8,7 +8,6 @@ import { apiUrl } from '../lib/apiBase';
 import { buildLivePulse, featuredStatRows } from '../lib/livePulse';
 import type { LiveMatch } from '../types';
 import meterStyles from './MatchMeters.module.css';
-import pulseStyles from './MatchPulse.module.css';
 
 interface MatchStatRow {
   type: string;
@@ -107,10 +106,6 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
   );
   const [statTab, setStatTab] = useState(0);
   const [showAllStats, setShowAllStats] = useState(false);
-  const [statCornerBeeps, setStatCornerBeeps] = useState<MatchTimelineEvent[]>([]);
-  const cornerTotalsRef = useRef<{ home: number; away: number } | null>(null);
-  const signalTapeRef = useRef<HTMLOListElement | null>(null);
-
 
   const liveHint = useMemo(
     () => liveMatches.find((m) => m.id === matchId) ?? null,
@@ -193,8 +188,6 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
   useEffect(() => {
     setStatTab(0);
     setShowAllStats(false);
-    setStatCornerBeeps([]);
-    cornerTotalsRef.current = null;
   }, [matchId, periodTabs.length]);
 
   const activeStats = periodTabs[statTab]?.statistics ?? data?.statistics ?? [];
@@ -235,68 +228,20 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
     });
   }, [pressure.supported, pressure.found, activeStats]);
 
-  // When live corner totals rise and the incidents feed missed them, beep into signals.
-  useEffect(() => {
-    if (!match || !pulse?.live || !pulse.key.corners) return;
-    const next = pulse.key.corners;
-    const prev = cornerTotalsRef.current;
-    cornerTotalsRef.current = next;
-    if (!prev) return;
-    const minute = match.elapsed ?? null;
-    const beeps: MatchTimelineEvent[] = [];
-    if (next.home > prev.home) {
-      for (let i = prev.home; i < next.home; i++) {
-        beeps.push({
-          time: minute,
-          extra: null,
-          type: 'Corner',
-          detail: 'Corner Kick',
-          teamId: match.home.id,
-          teamName: match.home.name,
-          player: null,
-          assist: null,
-        });
-      }
+  const possession = useMemo(() => {
+    const row = activeStats.find((r) => /possession/i.test(r.type));
+    if (row) {
+      const home = Number.parseFloat(String(row.home ?? '').replace('%', ''));
+      const away = Number.parseFloat(String(row.away ?? '').replace('%', ''));
+      if (Number.isFinite(home) && Number.isFinite(away)) return { home, away };
     }
-    if (next.away > prev.away) {
-      for (let i = prev.away; i < next.away; i++) {
-        beeps.push({
-          time: minute,
-          extra: null,
-          type: 'Corner',
-          detail: 'Corner Kick',
-          teamId: match.away.id,
-          teamName: match.away.name,
-          player: null,
-          assist: null,
-        });
-      }
+    if (match?.stats?.possessionHome != null && match.stats.possessionAway != null) {
+      return { home: match.stats.possessionHome, away: match.stats.possessionAway };
     }
-    if (beeps.length) {
-      setStatCornerBeeps((cur) => [...cur, ...beeps].slice(-12));
-    }
-  }, [match, pulse?.live, pulse?.key.corners]);
+    return null;
+  }, [activeStats, match]);
 
-  const signalEvents = useMemo(() => {
-    const feed = data?.events ?? [];
-    const merged = [...feed, ...statCornerBeeps];
-    const seen = new Set<string>();
-    const out: MatchTimelineEvent[] = [];
-    for (const ev of merged) {
-      const key = `${ev.time}|${ev.extra}|${ev.type}|${ev.detail}|${ev.teamName}|${ev.player}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(ev);
-    }
-    out.sort((a, b) => (a.time ?? 0) - (b.time ?? 0) || (a.extra ?? 0) - (b.extra ?? 0));
-    return out;
-  }, [data?.events, statCornerBeeps]);
-
-  useEffect(() => {
-    const el = signalTapeRef.current;
-    if (!el) return;
-    el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
-  }, [signalEvents.length]);
+  const pitchIncidents = useMemo(() => data?.events ?? [], [data?.events]);
 
   const featured = useMemo(
     () => (pulse ? featuredStatRows(activeStats, pulse.key) : []),
@@ -395,56 +340,10 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
                 homeName={match.home.name}
                 awayName={match.away.name}
                 live={Boolean(pulse.live)}
+                possession={possession}
+                incidents={pitchIncidents}
               />
             </div>
-          ) : null}
-
-          {pulse?.live ? (
-            <section
-              className={pulseStyles.root}
-              aria-label={t('timeline')}
-              style={{
-                display: 'block',
-                width: '100%',
-                maxWidth: '100%',
-                boxSizing: 'border-box',
-                margin: '0 0 1rem',
-                paddingTop: '0.75rem',
-                paddingBottom: '0.65rem',
-              }}
-            >
-              <p className={pulseStyles.signalsHead} style={{ marginTop: 0, border: 'none', paddingTop: 0 }}>
-                {t('timeline')}
-              </p>
-              {!signalEvents.length ? (
-                <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>
-                  {t('noEvents')}
-                </p>
-              ) : (
-                <ol
-                  className={pulseStyles.eventFeed}
-                  aria-label={t('timeline')}
-                  ref={signalTapeRef}
-                  style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}
-                >
-                  {signalEvents.map((ev, idx) => (
-                    <li
-                      key={`pulse-ev-${ev.time}-${ev.type}-${ev.teamName}-${ev.player}-${idx}`}
-                      className={`${pulseStyles.eventChip} ${eventRowClass(ev)}`}
-                      title={[ev.detail, ev.teamName, ev.player].filter(Boolean).join(' · ')}
-                    >
-                      <span className={`num ${pulseStyles.eventMin}`}>{eventMinute(ev)}</span>
-                      <span className={pulseStyles.eventEmoji} aria-hidden>
-                        {eventEmoji(ev)}
-                      </span>
-                      <span className={pulseStyles.eventLabel}>
-                        {ev.player ?? ev.detail ?? ev.type}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </section>
           ) : null}
 
           <AdSlot format="banner" className="ad-slot--feed" />
@@ -587,65 +486,4 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
 function formatStat(value: string | number | null): string {
   if (value == null) return '—';
   return String(value);
-}
-
-/** Timeline / pulse event emoji: goal ⚽ · pen 🟢 · yellow 🟨 · red 🟥 · sub 🔄 · corner 🚩 */
-function eventEmoji(ev: MatchTimelineEvent): string {
-  const type = (ev.type || '').toLowerCase();
-  const detail = (ev.detail || '').toLowerCase();
-
-  const isPen =
-    detail.includes('penalty') ||
-    detail.includes('pen.') ||
-    /\bpen\b/.test(detail) ||
-    detail.includes('spot kick');
-
-  if (type === 'corner' || detail.includes('corner')) return '🚩';
-  if (type === 'goal' || detail.includes('normal goal') || detail.includes('own goal')) {
-    if (isPen) return '🟢';
-    return '⚽';
-  }
-  if (isPen && (detail.includes('awarded') || detail.includes('confirmed'))) return '🟢';
-  if (type === 'card' || detail.includes('card')) {
-    if (detail.includes('red') || detail.includes('second yellow')) return '🟥';
-    return '🟨';
-  }
-  if (type === 'subst' || type === 'substitution' || detail.includes('substitution')) return '🔄';
-  if (detail.includes('var')) return '📺';
-  return '•';
-}
-
-function eventKindClass(ev: MatchTimelineEvent): 'goal' | 'pen' | 'yellow' | 'red' | 'sub' | 'corner' | 'other' {
-  const emoji = eventEmoji(ev);
-  if (emoji === '⚽') return 'goal';
-  if (emoji === '🟢') return 'pen';
-  if (emoji === '🟨') return 'yellow';
-  if (emoji === '🟥') return 'red';
-  if (emoji === '🔄') return 'sub';
-  if (emoji === '🚩') return 'corner';
-  return 'other';
-}
-
-function eventRowClass(ev: MatchTimelineEvent): string {
-  switch (eventKindClass(ev)) {
-    case 'goal':
-      return pulseStyles.event_goal;
-    case 'pen':
-      return pulseStyles.event_pen;
-    case 'yellow':
-      return pulseStyles.event_yellow;
-    case 'red':
-      return pulseStyles.event_red;
-    case 'sub':
-      return pulseStyles.event_sub;
-    case 'corner':
-      return pulseStyles.event_corner;
-    default:
-      return pulseStyles.event_other;
-  }
-}
-
-function eventMinute(ev: MatchTimelineEvent): string {
-  if (ev.time == null) return '—';
-  return `${ev.time}${ev.extra ? `+${ev.extra}` : ''}'`;
 }
