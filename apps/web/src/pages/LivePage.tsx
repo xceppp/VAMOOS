@@ -50,11 +50,6 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
 
   return (
     <section className="page">
-      <div className="page__intro">
-        <h1>{t('liveTitle')}</h1>
-        <p>{sort === 'ending' ? t('liveEnding') : t('livePopular')}</p>
-      </div>
-
       <div className="sort-bar" role="group" aria-label={t('sortAria')}>
         <button
           type="button"

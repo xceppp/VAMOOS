@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
-import { ChanceBar, probsFromOdds } from '../components/ChanceBar';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
 import type { LiveMatch } from '../types';
@@ -66,50 +65,6 @@ function numStat(stats: MatchStatRow[], type: string): { home: number; away: num
   const away = Number(String(row.away ?? '').replace('%', ''));
   if (!Number.isFinite(home) || !Number.isFinite(away)) return null;
   return { home, away };
-}
-
-function buildMatchAnalysis(
-  homeName: string,
-  awayName: string,
-  stats: MatchStatRow[],
-  t: ReturnType<typeof useI18n>['t'],
-): string | null {
-  if (!stats.length) return null;
-  const poss = numStat(stats, 'Ball Possession') ?? numStat(stats, 'Possession');
-  const shots =
-    numStat(stats, 'Shots on Goal') ??
-    numStat(stats, 'Shots on Target') ??
-    numStat(stats, 'Total Shots');
-  const corners = numStat(stats, 'Corner Kicks') ?? numStat(stats, 'Corners');
-
-  const bits: string[] = [];
-  if (poss) {
-    const leader = poss.home >= poss.away ? homeName : awayName;
-    const share = Math.max(poss.home, poss.away);
-    bits.push(t('matchAnalysisPoss', { team: leader, pct: Math.round(share) }));
-  }
-  if (shots) {
-    bits.push(
-      t('matchAnalysisShots', {
-        home: homeName,
-        away: awayName,
-        hs: shots.home,
-        as: shots.away,
-      }),
-    );
-  }
-  if (corners) {
-    bits.push(
-      t('matchAnalysisCorners', {
-        home: homeName,
-        away: awayName,
-        hc: corners.home,
-        ac: corners.away,
-      }),
-    );
-  }
-  if (!bits.length) return null;
-  return bits.join(' ');
 }
 
 export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPageProps) {
@@ -208,23 +163,12 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
 
   const activeStats = periodTabs[statTab]?.statistics ?? data?.statistics ?? [];
 
-  const analysis = useMemo(() => {
-    if (!match) return null;
-    return buildMatchAnalysis(match.home.name, match.away.name, activeStats, t);
-  }, [match, activeStats, t]);
-
-  const chanceProbs = useMemo(() => {
-    if (!match?.odds) return null;
-    return probsFromOdds(match.odds);
-  }, [match?.odds]);
-
   const stripStats = useMemo(() => {
     const cells: Array<{ label: string; home: number; away: number }> = [];
     const poss = numStat(activeStats, 'Ball Possession') ?? numStat(activeStats, 'Possession');
     const sot =
       numStat(activeStats, 'Shots on Goal') ?? numStat(activeStats, 'Shots on Target');
     const corners = numStat(activeStats, 'Corner Kicks') ?? numStat(activeStats, 'Corners');
-    // TODO: needs xG on live match detail payload — omit Expected goals cell until present
     if (poss) cells.push({ label: t('statPoss'), home: poss.home, away: poss.away });
     if (sot) cells.push({ label: t('statSot'), home: sot.home, away: sot.away });
     if (corners) cells.push({ label: t('statCorners'), home: corners.home, away: corners.away });
@@ -292,17 +236,6 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
               </div>
             </div>
 
-            {/* TODO: needs per-minute momentum array — pressure ribbon omitted */}
-
-            {chanceProbs ? (
-              <ChanceBar
-                home={chanceProbs.home}
-                draw={chanceProbs.draw}
-                away={chanceProbs.away}
-                odds={match.odds}
-              />
-            ) : null}
-
             {stripStats.length > 0 ? (
               <div className="stat-strip">
                 {stripStats.map((cell) => {
@@ -340,18 +273,6 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
               {data ? ` · ${t('autoRefresh')}` : ''}
             </p>
           </header>
-
-          {analysis ? (
-            <div className="match-analysis">
-              <h2 className="match-analysis__title">{t('matchAnalysisTitle')}</h2>
-              <p>{analysis}</p>
-            </div>
-          ) : (
-            <p className="page-lede muted">{t('matchAnalysisPending')}</p>
-          )}
-
-          {/* TODO: needs insight feed with sample size + confidence — insight cards omitted */}
-          {/* TODO: needs user betting record / session limits — record section omitted */}
 
           <AdSlot format="banner" className="ad-slot--feed" />
 
