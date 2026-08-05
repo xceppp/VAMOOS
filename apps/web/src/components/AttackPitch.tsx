@@ -136,11 +136,12 @@ export default function AttackPitch({
   }, [frame]);
 
   const x = frame?.x ?? 0;
-  const heat = frame?.heat ?? 0;
+  const heat = frame?.heat ?? 0.25;
   const side = frame?.side ?? 'neutral';
   const mirror = dir === 'rtl';
   const dur = transitionSeconds(history, frame);
-  const tint = Math.round(18 + heat * 52);
+  // Keep the band readable even when heat is low (seed / quiet spell).
+  const tint = Math.round(32 + heat * 48);
 
   const tape = useMemo(() => {
     const sorted = [...incidents].sort(
@@ -188,15 +189,24 @@ export default function AttackPitch({
         </span>
       </header>
 
-      <div style={{ position: 'relative', width: '100%', lineHeight: 0 }}>
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          lineHeight: 0,
+          borderRadius: 6,
+          overflow: 'hidden',
+          border: '1px solid var(--line)',
+          background: 'var(--pitch-wash)',
+          minHeight: 120,
+        }}
+      >
         {/* Pressure band — continuous gradient, no discrete marker. */}
         <div
           aria-hidden
           style={{
             position: 'absolute',
             inset: 0,
-            borderRadius: 6,
-            overflow: 'hidden',
             zIndex: 0,
             transform: mirror ? 'scaleX(-1)' : undefined,
           }}
@@ -205,11 +215,11 @@ export default function AttackPitch({
             style={{
               width: '200%',
               height: '100%',
-              marginLeft: `${-50 + x * 35}%`,
+              marginLeft: `${-50 + x * 42}%`,
               background: `linear-gradient(90deg,
-                color-mix(in srgb, var(--clay) ${tint}%, transparent),
+                color-mix(in srgb, var(--clay) ${tint}%, var(--pitch-wash)),
                 var(--pitch-wash),
-                color-mix(in srgb, var(--zellij) ${tint}%, transparent))`,
+                color-mix(in srgb, var(--zellij) ${tint}%, var(--pitch-wash)))`,
               transition: `margin-left ${dur}s cubic-bezier(0.22, 0.61, 0.36, 1), background ${dur}s linear`,
             }}
           />

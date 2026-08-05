@@ -58,12 +58,18 @@ const EASE = 0.42;
 /** Impulse scale — larger means the marker needs more action to swing. */
 const SCALE = 7.5;
 const MAX_FRAMES = 60;
-const LIVE_STATUSES = new Set(['1H', '2H', 'ET', 'BT', 'P', 'LIVE']);
+const LIVE_STATUSES = new Set(['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE']);
 
 function num(v: string | number | null | undefined): number {
   if (v == null) return 0;
-  // Feed sometimes sends "12 (3)" or "54%" — take the leading number.
-  const n = Number.parseFloat(String(v).replace('%', '').trim());
+  const s = String(v).trim();
+  // "19% (3/16)" / "60% (94/156)" → use the count, not the percentage.
+  const counted = s.match(/\((\d+(?:\.\d+)?)\s*\//);
+  if (counted) {
+    const n = Number(counted[1]);
+    if (Number.isFinite(n)) return n;
+  }
+  const n = Number.parseFloat(s.replace('%', ''));
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -168,11 +174,33 @@ export function useAttackPressure(input: {
     const poss = pair(input.rows, POSS_LABELS);
     const possBias = poss ? ((poss.home - 50) / 50) * POSS_PULL : 0;
 
+    const pushFrame = (
+      x: number,
+      heat: number,
+      corner: MomentumFrame['corner'],
+      shot: MomentumFrame['shot'],
+    ) => {
+      const frame: MomentumFrame = {
+        at: Date.now(),
+        x: Number(x.toFixed(3)),
+        heat: Number(heat.toFixed(3)),
+        side: Math.abs(x) < 0.1 ? 'neutral' : x > 0 ? 'home' : 'away',
+        corner,
+        shot,
+      };
+      setFrames((list) => {
+        const next = [...list, frame];
+        return next.length > MAX_FRAMES ? next.slice(-MAX_FRAMES) : next;
+      });
+    };
+
     if (!prev.current) {
       prev.current = snapshot;
-      // Seed the resting position from possession so an opened match doesn't
-      // start dead centre when one side is clearly on top.
+      // Seed from possession and emit immediately — otherwise the UI stays
+      // blank/midfield until the next refetch (~12–60s) and looks broken.
       pos.current.x = possBias;
+      pos.current.heat = Math.min(0.45, 0.2 + Math.abs(possBias));
+      pushFrame(pos.current.x, pos.current.heat, null, null);
       return;
     }
 
@@ -209,22 +237,9 @@ export function useAttackPressure(input: {
     pos.current.heat =
       total > 0
         ? Math.min(1, pos.current.heat * 0.5 + Math.tanh(total / 12) * 0.75)
-        : pos.current.heat * 0.55;
+        : Math.max(0.12, pos.current.heat * 0.7);
 
-    const x = pos.current.x;
-    const frame: MomentumFrame = {
-      at: Date.now(),
-      x: Number(x.toFixed(3)),
-      heat: Number(pos.current.heat.toFixed(3)),
-      side: Math.abs(x) < 0.1 ? 'neutral' : x > 0 ? 'home' : 'away',
-      corner,
-      shot,
-    };
-
-    setFrames((list) => {
-      const next = [...list, frame];
-      return next.length > MAX_FRAMES ? next.slice(-MAX_FRAMES) : next;
-    });
+    pushFrame(pos.current.x, pos.current.heat, corner, shot);
   }, [input.rows, input.status]);
 
   return {

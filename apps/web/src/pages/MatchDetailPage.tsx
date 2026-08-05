@@ -192,6 +192,15 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
 
   const activeStats = periodTabs[statTab]?.statistics ?? data?.statistics ?? [];
 
+  // Pressure always reads the full Match block — half tabs are thinner and
+  // made the pitch look dead when the user (or default) landed on 1st Half.
+  const pressureStats = useMemo(() => {
+    const matchPeriod = periodTabs.find((p) => /^match$/i.test(p.name));
+    if (matchPeriod?.statistics?.length) return matchPeriod.statistics;
+    if (data?.statistics?.length) return data.statistics;
+    return activeStats;
+  }, [periodTabs, data?.statistics, activeStats]);
+
   const pulse = useMemo(() => {
     if (!match) return null;
     return buildLivePulse({
@@ -201,7 +210,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
       awayName: match.away.name,
       goalsHome: match.goals.home ?? 0,
       goalsAway: match.goals.away ?? 0,
-      rows: activeStats,
+      rows: pressureStats,
       fallbackPoss:
         match.stats?.possessionHome != null && match.stats.possessionAway != null
           ? { home: match.stats.possessionHome, away: match.stats.possessionAway }
@@ -211,12 +220,12 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
           ? { home: match.stats.cornersHome, away: match.stats.cornersAway }
           : null,
     });
-  }, [match, activeStats]);
+  }, [match, pressureStats]);
 
   const pressure = useAttackPressure({
     matchId,
     status: match?.status ?? '',
-    rows: activeStats,
+    rows: pressureStats,
   });
 
   useEffect(() => {
@@ -224,12 +233,13 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
     console.debug('[pressure]', {
       supported: pressure.supported,
       found: pressure.found,
-      rows: activeStats.map((r) => r.type),
+      frame: pressure.current,
+      rows: pressureStats.map((r) => r.type),
     });
-  }, [pressure.supported, pressure.found, activeStats]);
+  }, [pressure.supported, pressure.found, pressure.current, pressureStats]);
 
   const possession = useMemo(() => {
-    const row = activeStats.find((r) => /possession/i.test(r.type));
+    const row = pressureStats.find((r) => /possession/i.test(r.type));
     if (row) {
       const home = Number.parseFloat(String(row.home ?? '').replace('%', ''));
       const away = Number.parseFloat(String(row.away ?? '').replace('%', ''));
@@ -239,7 +249,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
       return { home: match.stats.possessionHome, away: match.stats.possessionAway };
     }
     return null;
-  }, [activeStats, match]);
+  }, [pressureStats, match]);
 
   const pitchIncidents = useMemo(() => data?.events ?? [], [data?.events]);
 
