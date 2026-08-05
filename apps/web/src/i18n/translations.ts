@@ -253,9 +253,9 @@ export const translations = {
       'Vamoos predictions are statistical estimates built from historical league packs and live match signals. They are not tips from tipsters.',
     howDcTitle: 'Dixon-Coles + Elo (upcoming)',
     howDcP1:
-      'For scheduled matches we estimate expected goals with a Dixon-Coles bivariate Poisson model, then blend in Elo ratings so recent form and strength of schedule matter.',
+      'For scheduled matches we fit attack/defense and Elo from prior pack matches, then estimate expected goals with Dixon-Coles. Recent form tilts the rates; real head-to-head meetings (when present in the pack) blend into the forecast.',
     howDcP2:
-      'From the score matrix we derive market probabilities: match result (1X2), over/under totals, both teams to score, and a most-likely scoreline.',
+      'From the score matrix we derive 1X2, over/under, and BTTS. The shown scoreline is the most likely finish consistent with the favored result — not a flat mid-table default. Live games update that score from the current scoreline plus remaining time.',
     howMarketsTitle: 'Markets you will see',
     howMkt1x2: '1X2 — home win, draw, or away win probabilities.',
     howMktGoals: 'Goals markets — chance of more goals, over 2.5 / 3.5.',
@@ -530,9 +530,9 @@ export const translations = {
       'توقعات Vamoos تقديرات إحصائية من باكات الدوريات التاريخية وإشارات لايف. ماشي نصايح من ناس.',
     howDcTitle: 'Dixon-Coles + Elo (الجايين)',
     howDcP1:
-      'للماتشات المجدولين كنقدّرو الأهداف المتوقعة بموديل Dixon-Coles، ومن بعد كنخلطو Elo باش الفورمة والقوة يدخلو ف الحساب.',
+      'للماتشات المجدولين كنفيّطو الهجوم/الدفاع و Elo من ماتشات سابقة ف الباك، ومن بعد Dixon-Coles. الفورمة الأخيرة كتحرّك المعدلات، والمواجهات المباشرة الحقيقية (إلا كانو ف الباك) كيدخلو ف التوقّع.',
     howDcP2:
-      'من ماتريس السكور كنستخرجو احتمالات الأسواق: النتيجة (1X2)، الأهداف، الجوج كيسجلو، والسكور الأقرب.',
+      'من ماتريس السكور كنستخرجو 1X2 والأهداف و BTTS. السكور المعروض هو الأقرب مع النتيجة المفضلة — ماشي تعادلات عشوائية. ف اللايف كنحدّثوه من السكور الحالي + الوقت اللي بقا.',
     howMarketsTitle: 'الأسواق اللي غادي تشوف',
     howMkt1x2: '1X2 — فوز الدار، التعادل، ولا فوز الضيف.',
     howMktGoals: 'أسواق الأهداف — فرصة أهداف زايدة، فوق 2.5 / 3.5.',

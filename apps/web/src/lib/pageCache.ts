@@ -50,6 +50,7 @@ export interface DixonPickCache {
   confidence: number;
   confidenceRaw?: number;
   mostLikelyScore: string;
+  topScores?: Array<{ score: string; prob: number }>;
   potential: string;
   heat: number;
   expectedGoals: { home: number; away: number; total: number };

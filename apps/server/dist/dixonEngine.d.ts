@@ -1,5 +1,7 @@
 /**
  * Pure TypeScript Dixon-Coles + Elo board engine.
+ * Fits team strengths from pack history (or synthesized prior matches),
+ * applies recent form + H2H, then scores Dixon-Coles scorelines.
  * Reads offline league packs from apps/predictor/data/leagues — no Python required.
  */
 export interface DixonMarketSide {
@@ -43,6 +45,10 @@ export interface DixonEnginePick {
     confidence: number;
     confidenceRaw?: number;
     mostLikelyScore: string;
+    topScores?: Array<{
+        score: string;
+        prob: number;
+    }>;
     potential: string;
     heat: number;
     expectedGoals: {
@@ -66,6 +72,14 @@ export interface DixonEnginePick {
     };
     markets: DixonMarkets;
     model: 'dixon-coles-elo';
+    signals?: {
+        formHome: number;
+        formAway: number;
+        h2hMeetings: number;
+        h2hAvgHome: number;
+        h2hAvgAway: number;
+        matchedHistory: boolean;
+    };
 }
 interface MatchInput {
     id: string;
@@ -90,4 +104,6 @@ export declare function runDixonBatch(matches: MatchInput[]): {
     error?: string;
 };
 export declare function listAvailablePacks(): string[];
+/** Test/helper: clear fitted caches after pack edits. */
+export declare function clearDixonCaches(): void;
 export {};

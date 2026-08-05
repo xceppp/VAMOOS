@@ -1,0 +1,102 @@
+/* Scoped dual meters for match detail stats */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  direction: ltr;
+  width: 100%;
+}
+
+.listMore {
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0.85rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  direction: ltr;
+  width: 100%;
+  border-top: 1px solid var(--line-soft);
+}
+
+.row {
+  min-width: 0;
+  width: 100%;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(2.75rem, 3.5rem) minmax(0, 1fr) minmax(2.75rem, 3.5rem);
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+  font-size: 0.88rem;
+}
+
+.top span {
+  text-align: center;
+  color: var(--text2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.top strong {
+  font-weight: 600;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+
+.top strong:last-child {
+  text-align: end;
+}
+
+.lead {
+  color: var(--text) !important;
+}
+
+.track {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--line-soft);
+  width: 100%;
+}
+
+.home,
+.away {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  transition: width 0.6s var(--ease);
+}
+
+.home {
+  background: var(--pitch);
+}
+
+.away {
+  background: var(--zellij);
+}
+
+@media (max-width: 620px) {
+  .top {
+    grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  .top span {
+    font-size: 0.72rem;
+  }
+
+  .track {
+    height: 7px;
+  }
+}

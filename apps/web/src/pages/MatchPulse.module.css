@@ -1,0 +1,184 @@
+/* Scoped match-detail pulse — hashed class names, no global collisions */
+
+.root {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  box-sizing: border-box;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border-radius: var(--r-l);
+  border: 1px solid var(--line);
+  background: linear-gradient(168deg, var(--card2), var(--card) 60%);
+  overflow: visible;
+  direction: ltr;
+  position: relative;
+}
+
+.head {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.85rem;
+}
+
+.head h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.sub {
+  display: block;
+  margin: 0.25rem 0 0;
+  font-size: 12.5px;
+  color: var(--text2);
+  line-height: 1.35;
+}
+
+.gauges {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 0.85rem;
+}
+
+.gauge {
+  min-width: 0;
+  padding: 10px 8px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--line-soft);
+  background: var(--bg2);
+  text-align: center;
+}
+
+.gaugeHigh {
+  border-color: color-mix(in srgb, var(--pitch) 45%, var(--line));
+  background: var(--pitch-wash);
+}
+
+.gaugeMed {
+  border-color: color-mix(in srgb, var(--saffron) 40%, var(--line));
+  background: var(--saffron-wash);
+}
+
+.label {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text3);
+  margin-bottom: 4px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.value {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.signals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.signal {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border-radius: var(--r-s);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  border: 1px solid var(--line);
+  background: var(--card2);
+  color: var(--text);
+}
+
+.signalText {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.signalDot {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+}
+
+.signalHigh {
+  background: var(--pitch-wash);
+  border-color: color-mix(in srgb, var(--pitch) 40%, var(--line));
+}
+
+.signalHigh .signalDot {
+  background: var(--pitch);
+  animation: breathe 2.6s var(--ease) infinite;
+}
+
+.signalMed {
+  background: var(--saffron-wash);
+  border-color: color-mix(in srgb, var(--saffron) 35%, var(--line));
+}
+
+.signalMed .signalDot {
+  background: var(--saffron);
+}
+
+@media (max-width: 620px) {
+  .root {
+    padding: 0.85rem 0.8rem;
+  }
+
+  .gauges {
+    gap: 6px;
+  }
+
+  .gauge {
+    padding: 8px 4px;
+  }
+
+  .label {
+    font-size: 9.5px;
+  }
+
+  .value {
+    font-size: 18px;
+  }
+
+  .hint {
+    font-size: 10px;
+  }
+
+  .signal {
+    font-size: 12px;
+  }
+}

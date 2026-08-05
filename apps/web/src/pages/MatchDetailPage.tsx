@@ -10,6 +10,8 @@ import {
   type PulseSignal,
 } from '../lib/livePulse';
 import type { LiveMatch } from '../types';
+import meterStyles from './MatchMeters.module.css';
+import pulseStyles from './MatchPulse.module.css';
 
 interface MatchStatRow {
   type: string;
@@ -112,15 +114,15 @@ function DualMeter({
   const awayLeads = away > home;
 
   return (
-    <li className="dual-meter">
-      <div className="dual-meter__top">
-        <strong className={`num${homeLeads ? ' is-lead' : ''}`}>{homeLabel}</strong>
+    <li className={meterStyles.row}>
+      <div className={meterStyles.top}>
+        <strong className={`num${homeLeads ? ` ${meterStyles.lead}` : ''}`}>{homeLabel}</strong>
         <span>{label}</span>
-        <strong className={`num${awayLeads ? ' is-lead' : ''}`}>{awayLabel}</strong>
+        <strong className={`num${awayLeads ? ` ${meterStyles.lead}` : ''}`}>{awayLabel}</strong>
       </div>
-      <div className="dual-meter__track" aria-hidden>
-        <i style={{ width: `${homePct}%` }} />
-        <b style={{ width: `${100 - homePct}%` }} />
+      <div className={meterStyles.track} aria-hidden>
+        <span className={meterStyles.home} style={{ width: `${homePct}%` }} />
+        <span className={meterStyles.away} style={{ width: `${100 - homePct}%` }} />
       </div>
     </li>
   );
@@ -334,41 +336,164 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
           </header>
 
           {pulse?.live ? (
-            <section className="live-pulse" aria-label={t('pulseTitle')}>
-              <div className="live-pulse__head">
-                <h2>
+            <section
+              className={pulseStyles.root}
+              aria-label={t('pulseTitle')}
+              style={{
+                display: 'block',
+                width: '100%',
+                maxWidth: '100%',
+                height: 'auto',
+                minHeight: 'auto',
+                position: 'relative',
+                boxSizing: 'border-box',
+                margin: '0 0 1rem',
+                padding: '1rem',
+                overflow: 'visible',
+                flex: 'none',
+                alignItems: 'stretch',
+                justifyContent: 'flex-start',
+                flexDirection: 'column',
+              }}
+            >
+              <div
+                className={pulseStyles.head}
+                style={{ display: 'block', width: '100%', margin: '0 0 0.85rem' }}
+              >
+                <h2
+                  style={{
+                    margin: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                  }}
+                >
                   <span className="live-dot" aria-hidden />
                   {t('pulseTitle')}
                 </h2>
-                <p className="live-pulse__sub">{t('pulseSub')}</p>
+                <p
+                  className={pulseStyles.sub}
+                  style={{ display: 'block', margin: '0.25rem 0 0', fontSize: 12.5, lineHeight: 1.35 }}
+                >
+                  {t('pulseSub')}
+                </p>
               </div>
 
-              <div className="live-pulse__gauges">
-                <div className={`pulse-gauge pulse-gauge--${pulse.goalLevel}`}>
-                  <span className="pulse-gauge__label">{t('pulseGoalChance')}</span>
-                  <strong className="num">{pct(pulse.pNextGoal)}</strong>
-                  <span className="pulse-gauge__hint">{t('pulseLevel', { level: levelWord(pulse.goalLevel, t) })}</span>
+              <div
+                className={pulseStyles.gauges}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  gap: 8,
+                  width: '100%',
+                  margin: '0 0 0.85rem',
+                }}
+              >
+                <div
+                  className={[
+                    pulseStyles.gauge,
+                    pulse.goalLevel === 'high' ? pulseStyles.gaugeHigh : '',
+                    pulse.goalLevel === 'med' ? pulseStyles.gaugeMed : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  style={{ minWidth: 0, textAlign: 'center', padding: '10px 8px' }}
+                >
+                  <span className={pulseStyles.label} style={{ display: 'block' }}>
+                    {t('pulseGoalChance')}
+                  </span>
+                  <strong className={`num ${pulseStyles.value}`} style={{ display: 'block', fontSize: 22 }}>
+                    {pct(pulse.pNextGoal)}
+                  </strong>
+                  <span className={pulseStyles.hint} style={{ display: 'block' }}>
+                    {t('pulseLevel', { level: levelWord(pulse.goalLevel, t) })}
+                  </span>
                 </div>
-                <div className={`pulse-gauge pulse-gauge--${pulse.cornerLevel}`}>
-                  <span className="pulse-gauge__label">{t('pulseCornerChance')}</span>
-                  <strong className="num">{pct(pulse.pNextCorner)}</strong>
-                  <span className="pulse-gauge__hint">{t('pulseLevel', { level: levelWord(pulse.cornerLevel, t) })}</span>
+                <div
+                  className={[
+                    pulseStyles.gauge,
+                    pulse.cornerLevel === 'high' ? pulseStyles.gaugeHigh : '',
+                    pulse.cornerLevel === 'med' ? pulseStyles.gaugeMed : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  style={{ minWidth: 0, textAlign: 'center', padding: '10px 8px' }}
+                >
+                  <span className={pulseStyles.label} style={{ display: 'block' }}>
+                    {t('pulseCornerChance')}
+                  </span>
+                  <strong className={`num ${pulseStyles.value}`} style={{ display: 'block', fontSize: 22 }}>
+                    {pct(pulse.pNextCorner)}
+                  </strong>
+                  <span className={pulseStyles.hint} style={{ display: 'block' }}>
+                    {t('pulseLevel', { level: levelWord(pulse.cornerLevel, t) })}
+                  </span>
                 </div>
-                <div className={`pulse-gauge pulse-gauge--${levelFromIntensity(pulse.intensity)}`}>
-                  <span className="pulse-gauge__label">{t('pulseIntensity')}</span>
-                  <strong className="num">{Math.round(pulse.intensity * 100)}</strong>
-                  <span className="pulse-gauge__hint">{t('pulseTempo')}</span>
-                </div>
+                {(() => {
+                  const intensityLevel = levelFromIntensity(pulse.intensity);
+                  return (
+                    <div
+                      className={[
+                        pulseStyles.gauge,
+                        intensityLevel === 'high' ? pulseStyles.gaugeHigh : '',
+                        intensityLevel === 'med' ? pulseStyles.gaugeMed : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      style={{ minWidth: 0, textAlign: 'center', padding: '10px 8px' }}
+                    >
+                      <span className={pulseStyles.label} style={{ display: 'block' }}>
+                        {t('pulseIntensity')}
+                      </span>
+                      <strong className={`num ${pulseStyles.value}`} style={{ display: 'block', fontSize: 22 }}>
+                        {Math.round(pulse.intensity * 100)}
+                      </strong>
+                      <span className={pulseStyles.hint} style={{ display: 'block' }}>
+                        {t('pulseTempo')}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
-              <ul className="pulse-signals">
+              <ul
+                className={pulseStyles.signals}
+                style={{
+                  listStyle: 'none',
+                  margin: 0,
+                  padding: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  width: '100%',
+                }}
+              >
                 {pulse.signals.map((s) => (
                   <li
                     key={s.id}
-                    className={`pulse-signal pulse-signal--${s.level} pulse-signal--${s.side}`}
+                    className={[
+                      pulseStyles.signal,
+                      s.level === 'high' ? pulseStyles.signalHigh : '',
+                      s.level === 'med' ? pulseStyles.signalMed : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '9px 10px',
+                    }}
                   >
-                    <span className="pulse-signal__dot" aria-hidden />
-                    {signalText(s, t)}
+                    <span className={pulseStyles.signalDot} aria-hidden />
+                    <span className={pulseStyles.signalText} style={{ minWidth: 0, flex: 1 }}>
+                      {signalText(s, t)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -379,8 +504,8 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
 
           {error ? <p className="settings__msg">{error}</p> : null}
 
-          <section className="detail-panel detail-panel--stats">
-            <div className="detail-panel__head">
+          <section className="detail-panel match-stats">
+            <div className="match-stats__head">
               <h2>{t('statsLive')}</h2>
               {periodTabs.length > 1 ? (
                 <div className="stat-tabs" role="tablist" aria-label={t('stats')}>
@@ -404,7 +529,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
               <p className="muted">{t('noStats')}</p>
             ) : (
               <>
-                <ul className="dual-meter-list">
+                <ul className={meterStyles.list}>
                   {featured.map((row) => (
                     <DualMeter
                       key={row.type}
@@ -417,7 +542,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
                 </ul>
 
                 {extraStats.length > 0 ? (
-                  <div className="stats-more">
+                  <div className="match-stats__more">
                     <button
                       type="button"
                       className="btn btn--ghost btn--compact"
@@ -427,14 +552,14 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
                       {showAllStats ? t('statsHideMore') : t('statsShowMore', { n: extraStats.length })}
                     </button>
                     {showAllStats ? (
-                      <ul className="dual-meter-list dual-meter-list--more">
+                      <ul className={meterStyles.listMore}>
                         {extraStats.map((row, idx) => {
                           const home = Number(String(row.home ?? '').replace('%', ''));
                           const away = Number(String(row.away ?? '').replace('%', ''));
                           if (!Number.isFinite(home) || !Number.isFinite(away)) {
                             return (
-                              <li key={`${row.type}-${idx}`} className="dual-meter dual-meter--text">
-                                <div className="dual-meter__top">
+                              <li key={`${row.type}-${idx}`} className={meterStyles.row}>
+                                <div className={meterStyles.top}>
                                   <strong>{formatStat(row.home)}</strong>
                                   <span>{row.type}</span>
                                   <strong>{formatStat(row.away)}</strong>
