@@ -68,7 +68,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = lang;
     document.documentElement.dir = dir;
-    document.title = lang === 'ar' ? 'VAMOOS · نتائج مباشرة' : 'VAMOOS Livescores';
+    document.title = lang === 'ar' ? 'VAMOOS · النتائج لايف' : 'VAMOOS Livescores';
+    // Darija uses Arabic script (RTL) — keep ar lang code for fonts/locale
   }, [lang, dir]);
 
   const value = useMemo(

@@ -48,14 +48,14 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
               className={lang === 'en' ? 'active' : ''}
               onClick={() => setLang('en')}
             >
-              EN
+              {t('langEn')}
             </button>
             <button
               type="button"
               className={lang === 'ar' ? 'active' : ''}
               onClick={() => setLang('ar')}
             >
-              AR
+              {t('langDarija')}
             </button>
           </div>
 
