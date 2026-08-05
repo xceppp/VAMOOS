@@ -88,11 +88,6 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
       </header>
 
       <div className="shell-body">
-        {/*
-          TODO: needs league summaries from live matches for a leagues rail block
-          TODO: needs time-on-app / spending limit for session panel
-          TabNav is restyled as sticky left rail ≥961px and fixed bottom bar ≤960px
-        */}
         <aside className="shell-rail">
           <TabNav items={tabs} />
         </aside>
