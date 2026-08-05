@@ -116,9 +116,15 @@ export function estimateMinute(fields) {
         return { minute: 90, status: 'FT' };
     if (ab === 1 || ac === 1)
         return { minute: null, status: 'NS' };
-    // Half-time — frozen clock; UI should show HT, not a running minute
-    if (ac === 12)
+    // Stage 12: historically half-time. Current live feeds also send AC=12 for
+    // first half while AB=2 (in play) with AO = period start. Distinguish by clock:
+    // under ~46' from AO → still 1H; beyond that with AC still 12 → HT break.
+    if (ac === 12) {
+        if (ab === 2 && periodElapsed != null && periodElapsed <= 45 + 12) {
+            return { minute: clamp(periodElapsed, 1, 45 + 15), status: 'LIVE' };
+        }
         return { minute: 45, status: 'HT' };
+    }
     // Second half (AO = 2H start)
     if (ac === 13) {
         const m = periodElapsed != null ? clamp(45 + periodElapsed, 46, 90 + 15) : 70;
@@ -692,8 +698,6 @@ export function providerIdToNumber(id) {
     return ((h >>> 0) % 1_999_999_999) + 1;
 }
 function toMatchStatus(m) {
-    if (m.status === 'HT' || m.stageCode === 12)
-        return 'HT';
     if (m.status === 'FT')
         return 'FT';
     if (m.status === 'NS')
@@ -701,11 +705,15 @@ function toMatchStatus(m) {
     if (m.status === 'ET' || m.stageCode === 14 || m.stageCode === 15 || m.stageCode === 16) {
         return 'ET';
     }
+    // Stage 12 is 1H on the current feed when status is LIVE; HT only when decoded as HT.
+    if (m.status === 'HT')
+        return 'HT';
     if (m.stageCode === 13)
         return '2H';
-    // 38 / 6 / 7 = first half on the live feed
-    if (m.stageCode === 38 || m.stageCode === 6 || m.stageCode === 7)
+    // 38 / 6 / 7 / 12 = first half on the live feed
+    if (m.stageCode === 38 || m.stageCode === 6 || m.stageCode === 7 || m.stageCode === 12) {
         return '1H';
+    }
     if (m.minute != null && m.minute > 45)
         return '2H';
     if (m.minute != null)
@@ -741,7 +749,7 @@ export function toLiveMatch(m, popularity) {
         },
         status: toMatchStatus(m),
         // HT/FT show the label, not a fake running clock
-        elapsed: m.status === 'NS' || m.status === 'FT' || m.status === 'HT' || m.stageCode === 12
+        elapsed: m.status === 'NS' || m.status === 'FT' || m.status === 'HT'
             ? null
             : m.minute,
         kickoff: m.kickoffTs != null ? new Date(m.kickoffTs * 1000).toISOString() : undefined,
