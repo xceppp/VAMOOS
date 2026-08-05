@@ -9,6 +9,7 @@
     "dev:web": "npm run dev --workspace=@tg3d/web",
     "dev:server": "npm run dev --workspace=@tg3d/server",
     "build": "npm run build --workspace=@tg3d/web && npm run build --workspace=@tg3d/server && node scripts/copy-web.mjs",
+    "predeploy": "npm run build && node scripts/check-shipped-artifacts.mjs",
     "start": "node scripts/start-prod.mjs",
     "mobile:sync": "npm run cap:sync --workspace=@tg3d/web",
     "mobile:android": "npm run cap:android --workspace=@tg3d/web",
