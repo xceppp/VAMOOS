@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
-import { ChanceBar } from '../components/ChanceBar';
 import { PredictionCard } from '../components/PredictionCard';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
@@ -31,27 +30,32 @@ function PickCard({ pick }: { pick: DixonPick }) {
   const metaBits = [
     pick.score || null,
     pick.minute != null ? `${pick.minute}'` : null,
+    pick.kickoff && !pick.score
+      ? new Date(pick.kickoff).toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      : null,
   ].filter(Boolean);
   const href = pick.liveId ? `/match/${pick.liveId}` : undefined;
-  const probs = pick.prob;
 
   return (
-    <div className="pred-pick-wrap">
-      <PredictionCard
-        home={pick.home}
-        away={pick.away}
-        pick={pick.pick}
-        confidence={pick.confidence}
-        scoreline={pick.mostLikelyScore}
-        meta={metaBits.join(' · ') || undefined}
-        markets={pick.markets}
-        href={href}
-        risk={riskOf(pick)}
-      />
-      {probs ? (
-        <ChanceBar home={probs.home} draw={probs.draw} away={probs.away} />
-      ) : null}
-    </div>
+    <PredictionCard
+      home={pick.home}
+      away={pick.away}
+      homeLogo={pick.homeLogo}
+      awayLogo={pick.awayLogo}
+      league={pick.league}
+      pick={pick.pick}
+      confidence={pick.confidence}
+      scoreline={pick.mostLikelyScore}
+      meta={metaBits.join(' · ') || undefined}
+      markets={pick.markets}
+      probs={pick.prob}
+      href={href}
+      risk={riskOf(pick)}
+    />
   );
 }
 
@@ -66,75 +70,101 @@ function HeatCard({
   const risk = mode === 'corners' ? pick.cornerRisk : pick.goalRisk;
   const confidence = mode === 'corners' ? pick.cornerConfidence : pick.goalConfidence;
   const confPct = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
-  const headline =
-    mode === 'corners'
-      ? t('predHeatCornerPick', {
-          total: pick.cornersTotal,
-          more: pct(pick.pNextCorner),
-        })
-      : t('predHeatShotPick', {
-          total: pick.shotsOnTotal,
-          more: pct(pick.pNextGoal),
-        });
+  const riskLabel =
+    risk === 'green' ? t('riskBet') : risk === 'orange' ? t('riskMaybe') : t('riskSkip');
 
-  const body = (
-    <>
-      <div className="pred-card__face">
-        <span className="pred-card__team pred-card__team--home">{pick.home}</span>
-        <span className="pred-card__vs num">
-          {pick.score} · {pick.minute}'
-        </span>
-        <span className="pred-card__team pred-card__team--away">{pick.away}</span>
-      </div>
-      <p className="pred-card__league-line">{pick.league}</p>
-      <p className="pred-card__pick">{headline}</p>
-      <ul className="pred-card__markets" aria-label={t('predMarketsAria')}>
-        <li className="pred-card__market">
-          <span className="pred-card__market-label">{t('predHeatCorners')}</span>
-          <span className="pred-card__market-value num">
-            {pick.cornersHome}–{pick.cornersAway} ({pick.cornersTotal})
-          </span>
-          <span className="pred-card__market-prob num">{pct(pick.pNextCorner)}</span>
-        </li>
-        <li className="pred-card__market">
-          <span className="pred-card__market-label">{t('predHeatMoreCorners')}</span>
-          <span className="pred-card__market-value">
-            +{pick.expectedExtraCorners.toFixed(1)} {t('predHeatExpected')}
-          </span>
-          <span className="pred-card__market-prob">{pick.cornerPick}</span>
-        </li>
-        <li className="pred-card__market">
-          <span className="pred-card__market-label">{t('predHeatSot')}</span>
-          <span className="pred-card__market-value num">
-            {pick.shotsOnHome}–{pick.shotsOnAway} ({pick.shotsOnTotal})
-          </span>
-          <span className="pred-card__market-prob num">{pct(pick.pNextGoal)}</span>
-        </li>
-        <li className="pred-card__market">
-          <span className="pred-card__market-label">{t('predHeatMoreGoals')}</span>
-          <span className="pred-card__market-value">
-            +{pick.expectedExtraGoals.toFixed(1)} {t('predHeatExpected')}
-          </span>
-          <span className="pred-card__market-prob">{pick.goalPick}</span>
-        </li>
-      </ul>
-      <div className={`pred-heat-risk pred-heat-risk--${risk}`}>
-        {risk === 'green' ? t('riskBet') : risk === 'orange' ? t('riskMaybe') : t('riskSkip')}
-        {' · '}
-        <span className="num">
-          {confPct}% {t('predConfidence')}
-        </span>
-      </div>
-      <div className="pred-card__bar" aria-hidden>
-        <span className="pred-card__bar-fill" style={{ width: `${confPct}%` }} />
-      </div>
-      <p className="chance-bar__caveat">{t('chanceCaveat')}</p>
-    </>
-  );
+  const mainPick = mode === 'corners' ? pick.cornerPick : pick.goalPick;
+  const mainProb = mode === 'corners' ? pick.pNextCorner : pick.pNextGoal;
+  const mainMarket =
+    mode === 'corners' ? t('predHeatMoreCorners') : t('predHeatMoreGoals');
 
   return (
-    <Link className="pred-card" to={`/match/${pick.liveId}`}>
-      {body}
+    <Link className="pred-card pred-card--tips" to={`/match/${pick.liveId}`}>
+      <header className="pred-card__header">
+        <div className="pred-card__teams">
+          <div className="pred-card__club pred-card__club--home">
+            {pick.homeLogo ? (
+              <img src={pick.homeLogo} alt="" className="pred-crest" width={36} height={36} />
+            ) : (
+              <span className="pred-crest pred-crest--fallback num">{pick.home.slice(0, 2)}</span>
+            )}
+            <span className="pred-card__team-name">{pick.home}</span>
+          </div>
+          <div className="pred-card__mid">
+            <span className="pred-card__vs num">
+              {pick.score} · {pick.minute}'
+            </span>
+            <span className="pred-card__league-line">{pick.league}</span>
+          </div>
+          <div className="pred-card__club pred-card__club--away">
+            <span className="pred-card__team-name">{pick.away}</span>
+            {pick.awayLogo ? (
+              <img src={pick.awayLogo} alt="" className="pred-crest" width={36} height={36} />
+            ) : (
+              <span className="pred-crest pred-crest--fallback num">{pick.away.slice(0, 2)}</span>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className={`pred-tip pred-tip--${risk}`}>
+        <span className="pred-tip__eyebrow">{t('predMainTip')}</span>
+        <p className="pred-tip__pick">{mainPick}</p>
+        <p className="pred-tip__meta num">
+          {mainMarket} · {pct(mainProb)} · {confPct}% {t('predConfidence')} · {riskLabel}
+        </p>
+        <div className="pred-card__bar" aria-hidden>
+          <span className="pred-card__bar-fill" style={{ width: `${confPct}%` }} />
+        </div>
+      </div>
+
+      <div className="pred-bets">
+        <h3 className="pred-bets__title">{t('predBetOnTitle')}</h3>
+        <section className="pred-bet-group">
+          <p className="pred-bet-group__label">
+            {mode === 'corners' ? t('predBetGroupCorners') : t('predBetGroupShots')}
+          </p>
+          <ul className="bet-list">
+            {mode === 'corners' ? (
+              <>
+                <li className="bet-row bet-row--on">
+                  <span className="bet-row__market">{t('predHeatMoreCorners')}</span>
+                  <span className="bet-row__pick">{pick.cornerPick}</span>
+                  <span className="bet-row__prob num">{pct(pick.pNextCorner)}</span>
+                </li>
+                <li className="bet-row">
+                  <span className="bet-row__market">{t('predHeatCorners')}</span>
+                  <span className="bet-row__pick num">
+                    {pick.cornersHome}–{pick.cornersAway} ({pick.cornersTotal})
+                  </span>
+                  <span className="bet-row__prob num">
+                    +{pick.expectedExtraCorners.toFixed(1)}
+                  </span>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="bet-row bet-row--on">
+                  <span className="bet-row__market">{t('predHeatMoreGoals')}</span>
+                  <span className="bet-row__pick">{pick.goalPick}</span>
+                  <span className="bet-row__prob num">{pct(pick.pNextGoal)}</span>
+                </li>
+                <li className="bet-row">
+                  <span className="bet-row__market">{t('predHeatSot')}</span>
+                  <span className="bet-row__pick num">
+                    {pick.shotsOnHome}–{pick.shotsOnAway} ({pick.shotsOnTotal})
+                  </span>
+                  <span className="bet-row__prob num">
+                    +{pick.expectedExtraGoals.toFixed(1)}
+                  </span>
+                </li>
+              </>
+            )}
+          </ul>
+        </section>
+      </div>
+
+      <p className="chance-bar__caveat">{t('chanceCaveat')}</p>
     </Link>
   );
 }

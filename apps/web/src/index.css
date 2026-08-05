@@ -477,18 +477,237 @@ a:focus-visible,
 /* Prediction cards */
 .pred-card {
   display: block;
-  padding: 18px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  padding: 16px;
+  border-radius: var(--r-m);
+  border: 1px solid var(--line);
+  background: var(--card);
   color: inherit;
   text-decoration: none;
   margin-bottom: 12px;
-  transition: border-color 0.2s;
+  transition: border-color 0.16s var(--ease);
 }
 
 .pred-card:hover {
-  border-color: var(--border-strong);
+  border-color: color-mix(in srgb, var(--line) 70%, var(--text3));
+}
+
+.pred-card--tips {
+  padding: 14px 14px 12px;
+}
+
+.pred-card__header {
+  margin-bottom: 12px;
+}
+
+.pred-card__teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.pred-card__club {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pred-card__club--home {
+  justify-content: flex-start;
+  text-align: start;
+}
+
+.pred-card__club--away {
+  justify-content: flex-end;
+  text-align: end;
+}
+
+.pred-crest {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: var(--card2);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+  padding: 2px;
+}
+
+.pred-crest--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.pred-card__team-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.pred-card__mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  max-width: 7.5rem;
+}
+
+.pred-card__vs {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pred-card__league-line {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--text3);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.pred-tip {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--line-soft);
+  background: var(--card2);
+}
+
+.pred-tip--green {
+  border-color: color-mix(in srgb, var(--pitch) 35%, var(--line));
+  background: var(--pitch-wash);
+}
+
+.pred-tip--orange {
+  border-color: color-mix(in srgb, var(--saffron) 35%, var(--line));
+  background: var(--saffron-wash);
+}
+
+.pred-tip--red {
+  border-color: color-mix(in srgb, var(--clay) 35%, var(--line));
+  background: var(--clay-wash);
+}
+
+.pred-tip__eyebrow {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text3);
+  margin-bottom: 4px;
+}
+
+.pred-tip__pick {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.pred-tip__meta {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.pred-bets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pred-bets__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.pred-bet-group {
+  padding: 10px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--line-soft);
+  background: var(--bg2);
+}
+
+.pred-bet-group__label {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+}
+
+.pred-bet-group .chance-bar {
+  margin: 0 0 8px;
+}
+
+.pred-bet-group .chance-bar__caveat {
+  display: none;
+}
+
+.bet-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bet-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid transparent;
+}
+
+.bet-row--on {
+  border-color: color-mix(in srgb, var(--pitch) 40%, var(--line));
+  background: var(--pitch-wash);
+}
+
+.bet-row__market {
+  font-size: 11.5px;
+  color: var(--text3);
+}
+
+.bet-row__pick {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bet-row__prob {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 .pred-card__match {
@@ -550,8 +769,8 @@ a:focus-visible,
 }
 
 .pred-card__market-prob {
-  font-family: var(--font-score);
-  color: var(--gold-text);
+  font-family: var(--font-data);
+  color: var(--text2);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -567,14 +786,45 @@ a:focus-visible,
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: var(--gold);
+  background: var(--pitch);
+  transition: width 0.6s var(--ease);
 }
 
 .pred-card__pct {
-  font-family: var(--font-score);
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.pred-heat-risk {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.pred-heat-risk--green {
+  background: var(--risk-pos-bg);
+  color: var(--risk-pos-fg);
+}
+
+.pred-heat-risk--orange {
+  background: var(--risk-mid-bg);
+  color: var(--risk-mid-fg);
+}
+
+.pred-heat-risk--red {
+  background: var(--risk-neg-bg);
+  color: var(--risk-neg-fg);
+}
+
+.pred-card__pct {
+  font-family: var(--font-data);
   font-size: 12px;
   font-weight: 500;
-  color: var(--gold-text);
+  color: var(--text2);
   margin: 8px 0 0;
 }
 

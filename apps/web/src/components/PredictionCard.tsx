@@ -1,15 +1,21 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nProvider';
 import type { DixonMarkets } from '../lib/pageCache';
+import { ChanceBar } from './ChanceBar';
 
 export interface PredictionCardProps {
   home: string;
   away: string;
+  homeLogo?: string;
+  awayLogo?: string;
+  league?: string;
   pick: string;
   confidence: number;
   scoreline?: string;
   meta?: string;
   markets?: DixonMarkets | null;
+  probs?: { home: number; draw: number; away: number } | null;
   href?: string;
   external?: boolean;
   risk?: 'green' | 'orange' | 'red';
@@ -20,14 +26,75 @@ function pct(n: number | undefined): string {
   return `${Math.round(Math.max(0, Math.min(1, n)) * 100)}%`;
 }
 
+function cleanPick(raw: string): string {
+  return raw
+    .replace(/^MORE GOALS ·\s*/i, '')
+    .replace(/^OVER\/UNDER\s*/i, '')
+    .replace(/^BTTS ·\s*/i, '')
+    .replace(/^1X2 ·\s*/i, '')
+    .trim();
+}
+
+function Crest({ logo, name }: { logo?: string; name: string }) {
+  const [broken, setBroken] = useState(false);
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0] ?? '')
+    .join('')
+    .toUpperCase() || '?';
+
+  if (logo && !broken) {
+    return (
+      <img
+        src={logo}
+        alt=""
+        className="pred-crest"
+        width={36}
+        height={36}
+        loading="lazy"
+        decoding="async"
+        onError={() => setBroken(true)}
+      />
+    );
+  }
+  return <span className="pred-crest pred-crest--fallback num">{initials}</span>;
+}
+
+function BetRow({
+  market,
+  pick,
+  prob,
+  highlight,
+}: {
+  market: string;
+  pick: string;
+  prob: string;
+  highlight?: boolean;
+}) {
+  return (
+    <li className={`bet-row${highlight ? ' bet-row--on' : ''}`}>
+      <span className="bet-row__market">{market}</span>
+      <span className="bet-row__pick">{pick}</span>
+      <span className="bet-row__prob num">{prob}</span>
+    </li>
+  );
+}
+
 export function PredictionCard({
   home,
   away,
+  homeLogo,
+  awayLogo,
+  league,
   pick,
   confidence,
   scoreline,
   meta,
   markets,
+  probs,
   href,
   external,
   risk,
@@ -37,102 +104,151 @@ export function PredictionCard({
   const riskLabel =
     risk === 'green' ? t('riskBet') : risk === 'orange' ? t('riskMaybe') : risk === 'red' ? t('riskSkip') : null;
 
-  const rows: Array<{ key: string; label: string; value: string; sub?: string }> = [];
+  const resultRows: Array<{ key: string; market: string; pick: string; prob: string; on?: boolean }> = [];
+  const goalsRows: typeof resultRows = [];
+  const otherRows: typeof resultRows = [];
+
   if (markets) {
-    rows.push({
+    resultRows.push({
       key: 'result',
-      label: t('predMktResult'),
-      value: markets.result.pick,
-      sub: pct(markets.result.prob),
+      market: t('predMktResult'),
+      pick: cleanPick(markets.result.pick),
+      prob: pct(markets.result.prob),
+      on: true,
     });
-    rows.push({
-      key: 'more',
-      label: t('predMktMoreGoals'),
-      value: markets.moreGoals.pick.replace(/^MORE GOALS ·\s*/i, ''),
-      sub: pct(markets.moreGoals.prob),
-    });
-    rows.push({
+    goalsRows.push({
       key: 'o25',
-      label: t('predMktOver25'),
-      value: markets.over25.pick,
-      sub: pct(markets.over25.prob),
+      market: t('predMktOver25'),
+      pick: cleanPick(markets.over25.pick),
+      prob: pct(markets.over25.prob),
     });
-    rows.push({
+    goalsRows.push({
       key: 'o35',
-      label: t('predMktOver35'),
-      value: markets.over35.pick,
-      sub: pct(markets.over35.prob),
+      market: t('predMktOver35'),
+      pick: cleanPick(markets.over35.pick),
+      prob: pct(markets.over35.prob),
     });
-    rows.push({
+    goalsRows.push({
+      key: 'more',
+      market: t('predMktMoreGoals'),
+      pick: cleanPick(markets.moreGoals.pick),
+      prob: pct(markets.moreGoals.prob),
+    });
+    otherRows.push({
       key: 'btts',
-      label: t('predMktBtts'),
-      value: markets.btts.pick,
-      sub: pct(markets.btts.prob),
+      market: t('predMktBtts'),
+      pick: cleanPick(markets.btts.pick),
+      prob: pct(markets.btts.prob),
     });
     if (markets.nextGoal) {
-      rows.push({
+      otherRows.push({
         key: 'next',
-        label: t('predMktNextGoal'),
-        value: markets.nextGoal.team || markets.nextGoal.pick,
-        sub: `${pct(markets.nextGoal.prob)} · ${t('predMktAnyGoal', {
-          n: Math.round((markets.nextGoal.anyGoal ?? 0) * 100),
-        })}`,
+        market: t('predMktNextGoal'),
+        pick: markets.nextGoal.team || cleanPick(markets.nextGoal.pick),
+        prob: pct(markets.nextGoal.prob),
       });
     }
   }
 
   const body = (
     <>
-      <div className="pred-card__face">
-        <span className="pred-card__team pred-card__team--home">{home}</span>
-        <span className="pred-card__vs num">–</span>
-        <span className="pred-card__team pred-card__team--away">{away}</span>
-      </div>
-      {meta ? <p className="pred-card__meta">{meta}</p> : null}
-      <p className="pred-card__pick">{pick}</p>
-      {scoreline ? <p className="pred-card__scoreline">{t('predLikelyScore', { s: scoreline })}</p> : null}
+      <header className="pred-card__header">
+        <div className="pred-card__teams">
+          <div className="pred-card__club pred-card__club--home">
+            <Crest logo={homeLogo} name={home} />
+            <span className="pred-card__team-name">{home}</span>
+          </div>
+          <div className="pred-card__mid">
+            <span className="pred-card__vs num">{meta || 'vs'}</span>
+            {league ? <span className="pred-card__league-line">{league}</span> : null}
+          </div>
+          <div className="pred-card__club pred-card__club--away">
+            <span className="pred-card__team-name">{away}</span>
+            <Crest logo={awayLogo} name={away} />
+          </div>
+        </div>
+      </header>
 
-      {rows.length > 0 ? (
-        <ul className="pred-card__markets" aria-label={t('predMarketsAria')}>
-          {rows.map((r) => (
-            <li key={r.key} className="pred-card__market">
-              <span className="pred-card__market-label">{r.label}</span>
-              <span className="pred-card__market-value">{r.value}</span>
-              <span className="pred-card__market-prob num">{r.sub}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="pred-card__footer">
+      <div className={`pred-tip pred-tip--${risk ?? 'orange'}`}>
+        <span className="pred-tip__eyebrow">{t('predMainTip')}</span>
+        <p className="pred-tip__pick">{cleanPick(pick)}</p>
+        <p className="pred-tip__meta num">
+          {confPct}% {t('predConfidence')}
+          {riskLabel ? ` · ${riskLabel}` : ''}
+          {scoreline ? ` · ${t('predLikelyScore', { s: scoreline })}` : ''}
+        </p>
         <div className="pred-card__bar" aria-hidden>
           <span className="pred-card__bar-fill" style={{ width: `${confPct}%` }} />
         </div>
-        <p className="pred-card__pct num">
-          {confPct}% {t('predConfidence')}
-          {riskLabel ? (
-            <span className={`pred-card__risk pred-card__risk--${risk ?? 'orange'}`}> · {riskLabel}</span>
-          ) : null}
-        </p>
-        <p className="chance-bar__caveat">{t('chanceCaveat')}</p>
       </div>
+
+      <div className="pred-bets">
+        <h3 className="pred-bets__title">{t('predBetOnTitle')}</h3>
+
+        {probs ? (
+          <section className="pred-bet-group" aria-label={t('predBetGroupResult')}>
+            <p className="pred-bet-group__label">{t('predBetGroupResult')}</p>
+            <ChanceBar home={probs.home} draw={probs.draw} away={probs.away} />
+            {resultRows.length > 0 ? (
+              <ul className="bet-list">
+                {resultRows.map((r) => (
+                  <BetRow key={r.key} market={r.market} pick={r.pick} prob={r.prob} highlight={r.on} />
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        ) : resultRows.length > 0 ? (
+          <section className="pred-bet-group" aria-label={t('predBetGroupResult')}>
+            <p className="pred-bet-group__label">{t('predBetGroupResult')}</p>
+            <ul className="bet-list">
+              {resultRows.map((r) => (
+                <BetRow key={r.key} market={r.market} pick={r.pick} prob={r.prob} highlight={r.on} />
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {goalsRows.length > 0 ? (
+          <section className="pred-bet-group" aria-label={t('predBetGroupGoals')}>
+            <p className="pred-bet-group__label">{t('predBetGroupGoals')}</p>
+            <ul className="bet-list">
+              {goalsRows.map((r) => (
+                <BetRow key={r.key} market={r.market} pick={r.pick} prob={r.prob} />
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {otherRows.length > 0 ? (
+          <section className="pred-bet-group" aria-label={t('predBetGroupOther')}>
+            <p className="pred-bet-group__label">{t('predBetGroupOther')}</p>
+            <ul className="bet-list">
+              {otherRows.map((r) => (
+                <BetRow key={r.key} market={r.market} pick={r.pick} prob={r.prob} />
+              ))}
+            </ul>
+          </section>
+        ) : null}
+      </div>
+
+      <p className="chance-bar__caveat">{t('chanceCaveat')}</p>
     </>
   );
 
   if (!href) {
-    return <article className="pred-card">{body}</article>;
+    return <article className="pred-card pred-card--tips">{body}</article>;
   }
 
   if (external) {
     return (
-      <a className="pred-card" href={href} target="_blank" rel="noreferrer">
+      <a className="pred-card pred-card--tips" href={href} target="_blank" rel="noreferrer">
         {body}
       </a>
     );
   }
 
   return (
-    <Link className="pred-card" to={href}>
+    <Link className="pred-card pred-card--tips" to={href}>
       {body}
     </Link>
   );
