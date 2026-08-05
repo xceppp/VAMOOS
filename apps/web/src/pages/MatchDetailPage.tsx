@@ -226,6 +226,15 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
     rows: activeStats,
   });
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.debug('[pressure]', {
+      supported: pressure.supported,
+      found: pressure.found,
+      rows: activeStats.map((r) => r.type),
+    });
+  }, [pressure.supported, pressure.found, activeStats]);
+
   // When live corner totals rise and the incidents feed missed them, beep into signals.
   useEffect(() => {
     if (!match || !pulse?.live || !pulse.key.corners) return;

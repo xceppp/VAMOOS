@@ -1,12 +1,12 @@
 /**
- * Attack pressure, derived entirely in the browser.
+ * Attack pressure, derived in the browser from the match-detail payload.
  *
- * MatchDetailPage already refetches /api/matches/:id every 12s, and that
- * payload already carries the cumulative counters (Dangerous Attacks, Attacks,
- * Corner Kicks, Shots on Goal). This hook diffs them across refetches and
- * produces a frame per refetch. No new requests, no server changes.
+ * IMPORTANT: this reads the label vocabulary the Flashscore feed actually
+ * sends (see the `preferred` list in apps/server/src/liveFeed.ts). It does NOT
+ * use "Dangerous Attacks" or "Attacks" — those are Sportradar stats and are
+ * never present on this feed.
  *
- * Drop at: apps/web/src/hooks/useAttackPressure.ts
+ * Replaces: apps/web/src/hooks/useAttackPressure.ts
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -24,110 +24,99 @@ export interface MomentumFrame {
 
 type StatRows = Array<{ type: string; home: string | number | null; away: string | number | null }>;
 
-interface Counters {
-  dangerousHome: number;
-  dangerousAway: number;
-  attacksHome: number;
-  attacksAway: number;
-  cornersHome: number;
-  cornersAway: number;
-  sotHome: number;
-  sotAway: number;
-}
+/**
+ * Counters that tick upward during play, with how hard each pulls the marker.
+ * `invert: true` means the stat credits the OPPOSITE side — a save by the home
+ * keeper, or a home goal kick, both mean the away team was attacking.
+ */
+const SIGNALS: Array<{ labels: string[]; weight: number; invert?: boolean }> = [
+  // Rich coverage — high frequency and genuinely territorial.
+  { labels: ['Touches in opposition box'], weight: 1.6 },
+  { labels: ['Passes in final third'], weight: 0.35 },
+  { labels: ['Big chances'], weight: 4.5 },
+  { labels: ['Shots inside the box'], weight: 3.0 },
+  { labels: ['Expected goals (xG)', 'xG'], weight: 9.0 },
 
-const ZERO: Counters = {
-  dangerousHome: 0,
-  dangerousAway: 0,
-  attacksHome: 0,
-  attacksAway: 0,
-  cornersHome: 0,
-  cornersAway: 0,
-  sotHome: 0,
-  sotAway: 0,
-};
+  // Present on almost every covered match.
+  { labels: ['Shots on target'], weight: 3.5 },
+  { labels: ['Total shots', 'Shots'], weight: 1.8 },
+  { labels: ['Corner kicks', 'Corners'], weight: 2.5 },
+  { labels: ['Crosses'], weight: 0.8 },
+  { labels: ['Offsides'], weight: 0.6 },
+  { labels: ['Goalkeeper saves'], weight: 2.0, invert: true },
+  { labels: ['Goal kicks'], weight: 1.0, invert: true },
+];
 
-const W_DANGEROUS = 2.4;
-const W_ATTACK = 0.55;
-const W_CORNER = 3.0;
-const W_SHOT = 4.0;
+const CORNER_INDEX = SIGNALS.findIndex((s) => s.labels[0] === 'Corner kicks');
+const SOT_INDEX = SIGNALS.findIndex((s) => s.labels[0] === 'Shots on target');
 
+const POSS_LABELS = ['Ball possession', 'Possession'];
+
+/** How far possession alone can pull the resting position. */
+const POSS_PULL = 0.35;
 const EASE = 0.42;
-const DECAY = 0.86;
+/** Impulse scale — larger means the marker needs more action to swing. */
+const SCALE = 7.5;
 const MAX_FRAMES = 60;
-
 const LIVE_STATUSES = new Set(['1H', '2H', 'ET', 'BT', 'P', 'LIVE']);
 
 function num(v: string | number | null | undefined): number {
-  const n = Number(String(v ?? '').replace('%', '').trim());
+  if (v == null) return 0;
+  // Feed sometimes sends "12 (3)" or "54%" — take the leading number.
+  const n = Number.parseFloat(String(v).replace('%', '').trim());
   return Number.isFinite(n) ? n : 0;
 }
 
-function pick(rows: StatRows, ...labels: string[]): { home: number; away: number } | null {
+function findRow(rows: StatRows, labels: string[]) {
   for (const label of labels) {
     const row = rows.find((r) => r.type.toLowerCase() === label.toLowerCase());
-    if (row) return { home: num(row.home), away: num(row.away) };
+    if (row) return row;
   }
   for (const label of labels) {
     const row = rows.find((r) => r.type.toLowerCase().includes(label.toLowerCase()));
-    if (row) return { home: num(row.home), away: num(row.away) };
+    if (row) return row;
   }
   return null;
 }
 
-function readCounters(rows: StatRows): Counters {
-  // Flashscore-style feeds often omit Attacks / Dangerous Attacks.
-  // Fall back to territory / chance proxies that still move with the game.
-  const dangerous = pick(
-    rows,
-    'Dangerous Attacks',
-    'Dangerous attacks',
-    'Big chances',
-    'Touches in opposition box',
-    'Shots inside the box',
-  );
-  const attacks = pick(rows, 'Attacks', 'Total Attacks', 'Total shots');
-  const corners = pick(rows, 'Corner Kicks', 'Corners');
-  const sot = pick(rows, 'Shots on Goal', 'Shots on Target');
-  return {
-    dangerousHome: dangerous?.home ?? 0,
-    dangerousAway: dangerous?.away ?? 0,
-    attacksHome: attacks?.home ?? 0,
-    attacksAway: attacks?.away ?? 0,
-    cornersHome: corners?.home ?? 0,
-    cornersAway: corners?.away ?? 0,
-    sotHome: sot?.home ?? 0,
-    sotAway: sot?.away ?? 0,
-  };
+function pair(rows: StatRows, labels: string[]): { home: number; away: number } | null {
+  const row = findRow(rows, labels);
+  if (!row) return null;
+  return { home: num(row.home), away: num(row.away) };
 }
 
-/** Counters only ever rise; a drop means the feed reset, so treat it as no change. */
-function delta(next: Counters, prev: Counters): Counters {
-  const d = { ...ZERO };
-  for (const k of Object.keys(ZERO) as Array<keyof Counters>) {
-    d[k] = Math.max(0, next[k] - prev[k]);
-  }
-  return d;
+type Snapshot = Map<number, { home: number; away: number }>;
+
+function readSignals(rows: StatRows): Snapshot {
+  const out: Snapshot = new Map();
+  SIGNALS.forEach((sig, i) => {
+    const p = pair(rows, sig.labels);
+    if (p) out.set(i, p);
+  });
+  return out;
 }
 
-/** True when the feed publishes at least one pressure-related row (values may still be 0–0). */
-function feedSupportsPressure(rows: StatRows): boolean {
-  return Boolean(
-    pick(rows, 'Dangerous Attacks', 'Dangerous attacks') ||
-      pick(rows, 'Attacks', 'Total Attacks') ||
-      pick(rows, 'Total shots') ||
-      pick(rows, 'Big chances') ||
-      pick(rows, 'Touches in opposition box') ||
-      pick(rows, 'Shots inside the box') ||
-      pick(rows, 'Corner Kicks', 'Corners') ||
-      pick(rows, 'Shots on Goal', 'Shots on Target'),
-  );
+function rose(
+  now: Snapshot,
+  before: Snapshot,
+  index: number,
+): 'home' | 'away' | null {
+  if (index < 0) return null;
+  const a = now.get(index);
+  const b = before.get(index);
+  if (!a || !b) return null;
+  if (a.home > b.home) return 'home';
+  if (a.away > b.away) return 'away';
+  return null;
 }
 
 export interface AttackPressure {
   frames: MomentumFrame[];
   current: MomentumFrame | null;
-  /** False when the feed carries no attack counters for this match. */
+  /** False when the feed carries no usable counters for this match. */
   supported: boolean;
+  /** Which signals were found — useful for checking coverage per league. */
+  found: string[];
 }
 
 export function useAttackPressure(input: {
@@ -137,86 +126,111 @@ export function useAttackPressure(input: {
 }): AttackPressure {
   const [frames, setFrames] = useState<MomentumFrame[]>([]);
   const [supported, setSupported] = useState(true);
+  const [found, setFound] = useState<string[]>([]);
 
-  const prev = useRef<Counters | null>(null);
+  const prev = useRef<Snapshot | null>(null);
   const pos = useRef({ x: 0, heat: 0 });
   const seenMatch = useRef<number | null>(null);
+  /** Guards against the effect firing on renders that carry no new data. */
+  const lastFingerprint = useRef<string>('');
 
-  // Reset everything when navigating to a different match.
   useEffect(() => {
     if (seenMatch.current === input.matchId) return;
     seenMatch.current = input.matchId;
     prev.current = null;
     pos.current = { x: 0, heat: 0 };
+    lastFingerprint.current = '';
     setFrames([]);
     setSupported(true);
+    setFound([]);
   }, [input.matchId]);
 
   useEffect(() => {
     if (!LIVE_STATUSES.has(input.status)) return;
     if (!input.rows.length) return;
 
-    const counters = readCounters(input.rows);
+    // The parent may hand us a new array identity on every render. Only act
+    // when the underlying numbers actually changed — otherwise every render
+    // produces a zero delta and the marker decays to midfield and stays there.
+    const fingerprint = input.rows.map((r) => `${r.type}:${r.home}:${r.away}`).join('|');
+    if (fingerprint === lastFingerprint.current) return;
+    lastFingerprint.current = fingerprint;
 
-    if (!feedSupportsPressure(input.rows)) {
+    const snapshot = readSignals(input.rows);
+
+    if (snapshot.size === 0) {
       setSupported(false);
       return;
     }
     setSupported(true);
+    setFound([...snapshot.keys()].map((i) => SIGNALS[i].labels[0]));
 
-    // First reading only establishes a baseline. Emitting here would dump the
-    // whole match-to-date total in as one delta and slam the marker into a box.
+    const poss = pair(input.rows, POSS_LABELS);
+    const possBias = poss ? ((poss.home - 50) / 50) * POSS_PULL : 0;
+
     if (!prev.current) {
-      prev.current = counters;
+      prev.current = snapshot;
+      // Seed the resting position from possession so an opened match doesn't
+      // start dead centre when one side is clearly on top.
+      pos.current.x = possBias;
       return;
     }
 
-    const d = delta(counters, prev.current);
-    prev.current = counters;
+    let homePush = 0;
+    let awayPush = 0;
 
-    const homePush =
-      d.dangerousHome * W_DANGEROUS +
-      d.attacksHome * W_ATTACK +
-      d.cornersHome * W_CORNER +
-      d.sotHome * W_SHOT;
-    const awayPush =
-      d.dangerousAway * W_DANGEROUS +
-      d.attacksAway * W_ATTACK +
-      d.cornersAway * W_CORNER +
-      d.sotAway * W_SHOT;
+    for (const [i, now] of snapshot) {
+      const before = prev.current.get(i);
+      if (!before) continue;
+      const sig = SIGNALS[i];
+      const dh = Math.max(0, now.home - before.home);
+      const da = Math.max(0, now.away - before.away);
+      if (sig.invert) {
+        awayPush += dh * sig.weight;
+        homePush += da * sig.weight;
+      } else {
+        homePush += dh * sig.weight;
+        awayPush += da * sig.weight;
+      }
+    }
+
+    const corner = rose(snapshot, prev.current, CORNER_INDEX);
+    const shot = rose(snapshot, prev.current, SOT_INDEX);
+
+    prev.current = snapshot;
 
     const total = homePush + awayPush;
     const net = homePush - awayPush;
-    const target = total > 0 ? Math.tanh(net / 5.5) : 0;
 
-    if (total > 0) {
-      pos.current.x += (target - pos.current.x) * EASE;
-      pos.current.heat = Math.min(1, pos.current.heat * 0.5 + Math.tanh(total / 9) * 0.75);
-    } else {
-      pos.current.x *= DECAY;
-      pos.current.heat *= 0.55;
-    }
+    // Rest toward the possession bias rather than dead centre.
+    const target = total > 0 ? Math.tanh(net / SCALE) * 0.75 + possBias * 0.25 : possBias;
+
+    pos.current.x += (target - pos.current.x) * EASE;
+    pos.current.heat =
+      total > 0
+        ? Math.min(1, pos.current.heat * 0.5 + Math.tanh(total / 12) * 0.75)
+        : pos.current.heat * 0.55;
 
     const x = pos.current.x;
     const frame: MomentumFrame = {
       at: Date.now(),
       x: Number(x.toFixed(3)),
       heat: Number(pos.current.heat.toFixed(3)),
-      side: Math.abs(x) < 0.12 ? 'neutral' : x > 0 ? 'home' : 'away',
-      corner: d.cornersHome > 0 ? 'home' : d.cornersAway > 0 ? 'away' : null,
-      shot: d.sotHome > 0 ? 'home' : d.sotAway > 0 ? 'away' : null,
+      side: Math.abs(x) < 0.1 ? 'neutral' : x > 0 ? 'home' : 'away',
+      corner,
+      shot,
     };
 
     setFrames((list) => {
       const next = [...list, frame];
       return next.length > MAX_FRAMES ? next.slice(-MAX_FRAMES) : next;
     });
-    // Rows are a fresh array on every refetch, so this fires once per refetch.
   }, [input.rows, input.status]);
 
   return {
     frames,
     current: frames.length ? frames[frames.length - 1] : null,
     supported,
+    found,
   };
 }
