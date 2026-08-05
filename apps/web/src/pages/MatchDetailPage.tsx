@@ -1,14 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
+import AttackPitch from '../components/AttackPitch';
+import { useAttackPressure } from '../hooks/useAttackPressure';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
-import {
-  buildLivePulse,
-  featuredStatRows,
-  type PulseLevel,
-  type PulseSignal,
-} from '../lib/livePulse';
+import { buildLivePulse, featuredStatRows } from '../lib/livePulse';
 import type { LiveMatch } from '../types';
 import meterStyles from './MatchMeters.module.css';
 import pulseStyles from './MatchPulse.module.css';
@@ -66,35 +63,6 @@ interface MatchDetailPageProps {
   onToggle: (id: number) => void;
 }
 
-function pct(n: number): string {
-  return `${Math.round(Math.max(0, Math.min(1, n)) * 100)}%`;
-}
-
-function signalText(
-  signal: PulseSignal,
-  t: ReturnType<typeof useI18n>['t'],
-): string {
-  const team = signal.teamName ?? '';
-  switch (signal.labelKey) {
-    case 'pulseHighAttack':
-      return t('pulseHighAttack', { team });
-    case 'pulsePressing':
-      return team ? t('pulsePressingTeam', { team }) : t('pulsePressing');
-    case 'pulseCornerStorm':
-      return t('pulseCornerStorm');
-    case 'pulseGoalThreat':
-      return t('pulseGoalThreat');
-    case 'pulseQuiet':
-      return t('pulseQuiet');
-    case 'pulseShotHeavy':
-      return team ? t('pulseShotHeavyTeam', { team }) : t('pulseShotHeavy');
-    case 'pulsePossDominant':
-      return t('pulsePossDominant', { team });
-    default:
-      return '';
-  }
-}
-
 function DualMeter({
   label,
   home,
@@ -139,6 +107,10 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
   );
   const [statTab, setStatTab] = useState(0);
   const [showAllStats, setShowAllStats] = useState(false);
+  const [statCornerBeeps, setStatCornerBeeps] = useState<MatchTimelineEvent[]>([]);
+  const cornerTotalsRef = useRef<{ home: number; away: number } | null>(null);
+  const signalTapeRef = useRef<HTMLOListElement | null>(null);
+
 
   const liveHint = useMemo(
     () => liveMatches.find((m) => m.id === matchId) ?? null,
@@ -221,6 +193,8 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
   useEffect(() => {
     setStatTab(0);
     setShowAllStats(false);
+    setStatCornerBeeps([]);
+    cornerTotalsRef.current = null;
   }, [matchId, periodTabs.length]);
 
   const activeStats = periodTabs[statTab]?.statistics ?? data?.statistics ?? [];
@@ -245,6 +219,75 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
           : null,
     });
   }, [match, activeStats]);
+
+  const pressure = useAttackPressure({
+    matchId,
+    status: match?.status ?? '',
+    rows: activeStats,
+  });
+
+  // When live corner totals rise and the incidents feed missed them, beep into signals.
+  useEffect(() => {
+    if (!match || !pulse?.live || !pulse.key.corners) return;
+    const next = pulse.key.corners;
+    const prev = cornerTotalsRef.current;
+    cornerTotalsRef.current = next;
+    if (!prev) return;
+    const minute = match.elapsed ?? null;
+    const beeps: MatchTimelineEvent[] = [];
+    if (next.home > prev.home) {
+      for (let i = prev.home; i < next.home; i++) {
+        beeps.push({
+          time: minute,
+          extra: null,
+          type: 'Corner',
+          detail: 'Corner Kick',
+          teamId: match.home.id,
+          teamName: match.home.name,
+          player: null,
+          assist: null,
+        });
+      }
+    }
+    if (next.away > prev.away) {
+      for (let i = prev.away; i < next.away; i++) {
+        beeps.push({
+          time: minute,
+          extra: null,
+          type: 'Corner',
+          detail: 'Corner Kick',
+          teamId: match.away.id,
+          teamName: match.away.name,
+          player: null,
+          assist: null,
+        });
+      }
+    }
+    if (beeps.length) {
+      setStatCornerBeeps((cur) => [...cur, ...beeps].slice(-12));
+    }
+  }, [match, pulse?.live, pulse?.key.corners]);
+
+  const signalEvents = useMemo(() => {
+    const feed = data?.events ?? [];
+    const merged = [...feed, ...statCornerBeeps];
+    const seen = new Set<string>();
+    const out: MatchTimelineEvent[] = [];
+    for (const ev of merged) {
+      const key = `${ev.time}|${ev.extra}|${ev.type}|${ev.detail}|${ev.teamName}|${ev.player}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(ev);
+    }
+    out.sort((a, b) => (a.time ?? 0) - (b.time ?? 0) || (a.extra ?? 0) - (b.extra ?? 0));
+    return out;
+  }, [data?.events, statCornerBeeps]);
+
+  useEffect(() => {
+    const el = signalTapeRef.current;
+    if (!el) return;
+    el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
+  }, [signalEvents.length]);
 
   const featured = useMemo(
     () => (pulse ? featuredStatRows(activeStats, pulse.key) : []),
@@ -335,168 +378,63 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
             </p>
           </header>
 
+          {pulse?.live && pressure.supported ? (
+            <div style={{ marginBottom: '0.9rem' }}>
+              <AttackPitch
+                frame={pressure.current}
+                history={pressure.frames}
+                homeName={match.home.name}
+                awayName={match.away.name}
+                live={Boolean(pulse.live)}
+              />
+            </div>
+          ) : null}
+
           {pulse?.live ? (
             <section
               className={pulseStyles.root}
-              aria-label={t('pulseTitle')}
+              aria-label={t('timeline')}
               style={{
                 display: 'block',
                 width: '100%',
                 maxWidth: '100%',
-                height: 'auto',
-                minHeight: 'auto',
-                position: 'relative',
                 boxSizing: 'border-box',
                 margin: '0 0 1rem',
-                padding: '1rem',
-                overflow: 'visible',
-                flex: 'none',
-                alignItems: 'stretch',
-                justifyContent: 'flex-start',
-                flexDirection: 'column',
+                paddingTop: '0.75rem',
+                paddingBottom: '0.65rem',
               }}
             >
-              <div
-                className={pulseStyles.head}
-                style={{ display: 'block', width: '100%', margin: '0 0 0.85rem' }}
-              >
-                <h2
-                  style={{
-                    margin: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    fontSize: '1.05rem',
-                    fontWeight: 700,
-                    lineHeight: 1.3,
-                  }}
-                >
-                  <span className="live-dot" aria-hidden />
-                  {t('pulseTitle')}
-                </h2>
-                <p
-                  className={pulseStyles.sub}
-                  style={{ display: 'block', margin: '0.25rem 0 0', fontSize: 12.5, lineHeight: 1.35 }}
-                >
-                  {t('pulseSub')}
+              <p className={pulseStyles.signalsHead} style={{ marginTop: 0, border: 'none', paddingTop: 0 }}>
+                {t('timeline')}
+              </p>
+              {!signalEvents.length ? (
+                <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>
+                  {t('noEvents')}
                 </p>
-              </div>
-
-              <div
-                className={pulseStyles.gauges}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                  gap: 8,
-                  width: '100%',
-                  margin: '0 0 0.85rem',
-                }}
-              >
-                <div
-                  className={[
-                    pulseStyles.gauge,
-                    pulse.goalLevel === 'high' ? pulseStyles.gaugeHigh : '',
-                    pulse.goalLevel === 'med' ? pulseStyles.gaugeMed : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  style={{ minWidth: 0, textAlign: 'center', padding: '10px 8px' }}
+              ) : (
+                <ol
+                  className={pulseStyles.eventFeed}
+                  aria-label={t('timeline')}
+                  ref={signalTapeRef}
+                  style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}
                 >
-                  <span className={pulseStyles.label} style={{ display: 'block' }}>
-                    {t('pulseGoalChance')}
-                  </span>
-                  <strong className={`num ${pulseStyles.value}`} style={{ display: 'block', fontSize: 22 }}>
-                    {pct(pulse.pNextGoal)}
-                  </strong>
-                  <span className={pulseStyles.hint} style={{ display: 'block' }}>
-                    {t('pulseLevel', { level: levelWord(pulse.goalLevel, t) })}
-                  </span>
-                </div>
-                <div
-                  className={[
-                    pulseStyles.gauge,
-                    pulse.cornerLevel === 'high' ? pulseStyles.gaugeHigh : '',
-                    pulse.cornerLevel === 'med' ? pulseStyles.gaugeMed : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  style={{ minWidth: 0, textAlign: 'center', padding: '10px 8px' }}
-                >
-                  <span className={pulseStyles.label} style={{ display: 'block' }}>
-                    {t('pulseCornerChance')}
-                  </span>
-                  <strong className={`num ${pulseStyles.value}`} style={{ display: 'block', fontSize: 22 }}>
-                    {pct(pulse.pNextCorner)}
-                  </strong>
-                  <span className={pulseStyles.hint} style={{ display: 'block' }}>
-                    {t('pulseLevel', { level: levelWord(pulse.cornerLevel, t) })}
-                  </span>
-                </div>
-                {(() => {
-                  const intensityLevel = levelFromIntensity(pulse.intensity);
-                  return (
-                    <div
-                      className={[
-                        pulseStyles.gauge,
-                        intensityLevel === 'high' ? pulseStyles.gaugeHigh : '',
-                        intensityLevel === 'med' ? pulseStyles.gaugeMed : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      style={{ minWidth: 0, textAlign: 'center', padding: '10px 8px' }}
+                  {signalEvents.map((ev, idx) => (
+                    <li
+                      key={`pulse-ev-${ev.time}-${ev.type}-${ev.teamName}-${ev.player}-${idx}`}
+                      className={`${pulseStyles.eventChip} ${eventRowClass(ev)}`}
+                      title={[ev.detail, ev.teamName, ev.player].filter(Boolean).join(' · ')}
                     >
-                      <span className={pulseStyles.label} style={{ display: 'block' }}>
-                        {t('pulseIntensity')}
+                      <span className={`num ${pulseStyles.eventMin}`}>{eventMinute(ev)}</span>
+                      <span className={pulseStyles.eventEmoji} aria-hidden>
+                        {eventEmoji(ev)}
                       </span>
-                      <strong className={`num ${pulseStyles.value}`} style={{ display: 'block', fontSize: 22 }}>
-                        {Math.round(pulse.intensity * 100)}
-                      </strong>
-                      <span className={pulseStyles.hint} style={{ display: 'block' }}>
-                        {t('pulseTempo')}
+                      <span className={pulseStyles.eventLabel}>
+                        {ev.player ?? ev.detail ?? ev.type}
                       </span>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <ul
-                className={pulseStyles.signals}
-                style={{
-                  listStyle: 'none',
-                  margin: 0,
-                  padding: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6,
-                  width: '100%',
-                }}
-              >
-                {pulse.signals.map((s) => (
-                  <li
-                    key={s.id}
-                    className={[
-                      pulseStyles.signal,
-                      s.level === 'high' ? pulseStyles.signalHigh : '',
-                      s.level === 'med' ? pulseStyles.signalMed : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 8,
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '9px 10px',
-                    }}
-                  >
-                    <span className={pulseStyles.signalDot} aria-hidden />
-                    <span className={pulseStyles.signalText} style={{ minWidth: 0, flex: 1 }}>
-                      {signalText(s, t)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ol>
+              )}
             </section>
           ) : null}
 
@@ -585,35 +523,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
             )}
           </section>
 
-          <div className="detail-grid">
-            <section className="detail-panel">
-              <h2>{t('timeline')}</h2>
-              {!data?.events.length ? (
-                <p className="muted">{t('noEvents')}</p>
-              ) : (
-                <ol className="timeline">
-                  {data.events.map((ev, idx) => (
-                    <li key={`${ev.time}-${ev.type}-${ev.player}-${idx}`} className="timeline__item">
-                      <span className="timeline__min num">
-                        {ev.time != null ? `${ev.time}${ev.extra ? `+${ev.extra}` : ''}'` : '—'}
-                      </span>
-                      <span className={`timeline__badge timeline__badge--${ev.type.toLowerCase()}`}>
-                        {badgeLabel(ev)}
-                      </span>
-                      <span className="timeline__text">
-                        <strong>{ev.player ?? ev.detail}</strong>
-                        <em>
-                          {ev.teamName}
-                          {ev.assist ? ` · assist ${ev.assist}` : ''}
-                          {ev.type !== 'Goal' ? ` · ${ev.detail}` : ''}
-                        </em>
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </section>
-
+          <div className="detail-grid detail-grid--solo">
             <section className="detail-panel">
               <h2>{t('lineups')}</h2>
               {!data?.lineups.length ? (
@@ -665,26 +575,68 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
   );
 }
 
-function levelWord(level: PulseLevel, t: ReturnType<typeof useI18n>['t']): string {
-  if (level === 'high') return t('pulseHigh');
-  if (level === 'med') return t('pulseMed');
-  return t('pulseLow');
-}
-
-function levelFromIntensity(n: number): PulseLevel {
-  if (n >= 0.65) return 'high';
-  if (n >= 0.35) return 'med';
-  return 'low';
-}
-
 function formatStat(value: string | number | null): string {
   if (value == null) return '—';
   return String(value);
 }
 
-function badgeLabel(ev: MatchTimelineEvent): string {
-  if (ev.type === 'Goal') return 'GOAL';
-  if (ev.type === 'Card') return ev.detail.includes('Yellow') ? 'YC' : 'RC';
-  if (ev.type === 'subst') return 'SUB';
-  return ev.type.slice(0, 3).toUpperCase();
+/** Timeline / pulse event emoji: goal ⚽ · pen 🟢 · yellow 🟨 · red 🟥 · sub 🔄 · corner 🚩 */
+function eventEmoji(ev: MatchTimelineEvent): string {
+  const type = (ev.type || '').toLowerCase();
+  const detail = (ev.detail || '').toLowerCase();
+
+  const isPen =
+    detail.includes('penalty') ||
+    detail.includes('pen.') ||
+    /\bpen\b/.test(detail) ||
+    detail.includes('spot kick');
+
+  if (type === 'corner' || detail.includes('corner')) return '🚩';
+  if (type === 'goal' || detail.includes('normal goal') || detail.includes('own goal')) {
+    if (isPen) return '🟢';
+    return '⚽';
+  }
+  if (isPen && (detail.includes('awarded') || detail.includes('confirmed'))) return '🟢';
+  if (type === 'card' || detail.includes('card')) {
+    if (detail.includes('red') || detail.includes('second yellow')) return '🟥';
+    return '🟨';
+  }
+  if (type === 'subst' || type === 'substitution' || detail.includes('substitution')) return '🔄';
+  if (detail.includes('var')) return '📺';
+  return '•';
+}
+
+function eventKindClass(ev: MatchTimelineEvent): 'goal' | 'pen' | 'yellow' | 'red' | 'sub' | 'corner' | 'other' {
+  const emoji = eventEmoji(ev);
+  if (emoji === '⚽') return 'goal';
+  if (emoji === '🟢') return 'pen';
+  if (emoji === '🟨') return 'yellow';
+  if (emoji === '🟥') return 'red';
+  if (emoji === '🔄') return 'sub';
+  if (emoji === '🚩') return 'corner';
+  return 'other';
+}
+
+function eventRowClass(ev: MatchTimelineEvent): string {
+  switch (eventKindClass(ev)) {
+    case 'goal':
+      return pulseStyles.event_goal;
+    case 'pen':
+      return pulseStyles.event_pen;
+    case 'yellow':
+      return pulseStyles.event_yellow;
+    case 'red':
+      return pulseStyles.event_red;
+    case 'sub':
+      return pulseStyles.event_sub;
+    case 'corner':
+      return pulseStyles.event_corner;
+    default:
+      return pulseStyles.event_other;
+  }
+}
+
+function eventMinute(ev: MatchTimelineEvent): string {
+  if (ev.time == null) return '—';
+  return `${ev.time}${ev.extra ? `+${ev.extra}` : ''}'`;
 }

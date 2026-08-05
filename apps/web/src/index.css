@@ -1840,6 +1840,10 @@ html[dir='rtl'] .detail-hero__team--away {
   margin-bottom: 0.9rem;
 }
 
+.detail-grid--solo {
+  grid-template-columns: 1fr;
+}
+
 .detail-panel {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -1964,23 +1968,59 @@ html[dir='rtl'] .detail-hero__team--away {
 }
 
 .timeline__badge {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  padding: 0.22rem 0.4rem;
-  border-radius: 999px;
-  background: rgba(11, 61, 46, 0.12);
-  color: var(--pitch);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 0.15rem;
+  border-radius: 10px;
+  background: var(--card2);
+  color: var(--text);
+  border: 1px solid var(--line-soft);
+}
+
+.timeline__badge--emoji {
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
 }
 
 .timeline__badge--goal {
-  background: rgba(255, 90, 54, 0.18);
-  color: var(--flame);
+  background: color-mix(in srgb, var(--pitch) 16%, var(--card2));
+  border-color: color-mix(in srgb, var(--pitch) 35%, var(--line));
+}
+
+.timeline__badge--pen {
+  background: color-mix(in srgb, var(--pitch) 18%, var(--card2));
+  border-color: color-mix(in srgb, var(--pitch) 40%, var(--line));
+}
+
+.timeline__badge--yellow {
+  background: var(--saffron-wash);
+  border-color: color-mix(in srgb, var(--saffron) 40%, var(--line));
+}
+
+.timeline__badge--red {
+  background: var(--clay-wash);
+  border-color: color-mix(in srgb, var(--clay) 40%, var(--line));
+}
+
+.timeline__badge--sub {
+  background: var(--zellij-wash);
+  border-color: color-mix(in srgb, var(--zellij) 35%, var(--line));
+}
+
+.timeline__badge--corner {
+  background: color-mix(in srgb, var(--saffron) 14%, var(--card2));
+  border-color: color-mix(in srgb, var(--saffron) 35%, var(--line));
 }
 
 .timeline__badge--card {
-  background: rgba(245, 200, 66, 0.35);
-  color: #7a5a00;
+  background: var(--saffron-wash);
+  color: var(--saffron);
 }
 
 .timeline__text {

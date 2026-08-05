@@ -683,6 +683,9 @@ export function parseEventsFeed(raw: string): FeedEvent[] {
       if (/goal/i.test(label) && !/disallowed|cancelled/i.test(label)) {
         type = 'Goal';
         detail = /penalty/i.test(label) ? 'Penalty' : 'Normal Goal';
+      } else if (/corner/i.test(label)) {
+        type = 'Corner';
+        detail = 'Corner Kick';
       } else if (/yellow/i.test(label)) {
         type = 'Card';
         detail = 'Yellow Card';
@@ -692,6 +695,9 @@ export function parseEventsFeed(raw: string): FeedEvent[] {
       } else if (/substitution/i.test(label)) {
         type = 'subst';
         detail = label;
+      } else if (/penalty/i.test(label)) {
+        type = 'Goal';
+        detail = 'Penalty';
       }
       out.push({
         minute,

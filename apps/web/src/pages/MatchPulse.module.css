@@ -1,4 +1,4 @@
-/* Scoped match-detail pulse — hashed class names, no global collisions */
+/* Live pulse — heartbeat / ECG monitor look */
 
 .root {
   display: block;
@@ -7,19 +7,24 @@
   height: auto;
   box-sizing: border-box;
   margin: 0 0 1rem;
-  padding: 1rem;
+  padding: 0.9rem 1rem 1rem;
   border-radius: var(--r-l);
   border: 1px solid var(--line);
-  background: linear-gradient(168deg, var(--card2), var(--card) 60%);
-  overflow: visible;
+  background:
+    linear-gradient(180deg, rgba(78, 156, 119, 0.06), transparent 40%),
+    linear-gradient(168deg, var(--card2), var(--card) 70%);
+  overflow: hidden;
   direction: ltr;
   position: relative;
 }
 
 .head {
-  display: block;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.75rem;
 }
 
 .head h2 {
@@ -28,72 +33,113 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 700;
   color: var(--text);
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .sub {
-  display: block;
-  margin: 0.25rem 0 0;
-  font-size: 12.5px;
-  color: var(--text2);
-  line-height: 1.35;
+  margin: 0;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-data);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.gauges {
+.scope {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 10px 8px 6px;
+  border-radius: var(--r-s);
+  border: 1px solid color-mix(in srgb, var(--pitch) 28%, var(--line));
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 7px,
+      rgba(78, 156, 119, 0.05) 7px,
+      rgba(78, 156, 119, 0.05) 8px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 11px,
+      rgba(78, 156, 119, 0.04) 11px,
+      rgba(78, 156, 119, 0.04) 12px
+    ),
+    #0b1216;
+  overflow: hidden;
+}
+
+.scopeSvg {
+  display: block;
+  width: 100%;
+  height: 56px;
+}
+
+.traces {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   width: 100%;
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.75rem;
 }
 
-.gauge {
+.trace {
   min-width: 0;
-  padding: 10px 8px;
+  padding: 8px 8px 6px;
   border-radius: var(--r-s);
   border: 1px solid var(--line-soft);
-  background: var(--bg2);
-  text-align: center;
+  background: #0b1216;
 }
 
-.gaugeHigh {
+.traceHigh {
   border-color: color-mix(in srgb, var(--pitch) 45%, var(--line));
-  background: var(--pitch-wash);
 }
 
-.gaugeMed {
+.traceMed {
   border-color: color-mix(in srgb, var(--saffron) 40%, var(--line));
-  background: var(--saffron-wash);
 }
 
-.label {
-  display: block;
-  font-size: 10.5px;
-  color: var(--text3);
+.traceMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   margin-bottom: 4px;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
 }
 
-.value {
+.traceCode {
+  font-family: var(--font-data);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.traceVal {
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pitch);
+}
+
+.traceMed .traceVal {
+  color: var(--saffron);
+}
+
+.traceSvg {
   display: block;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.1;
+  width: 100%;
+  height: 28px;
 }
 
-.hint {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--text2);
-}
-
-.signals {
+.channels {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -103,82 +149,238 @@
   width: 100%;
 }
 
-.signal {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+.channel {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   box-sizing: border-box;
-  padding: 9px 10px;
+  padding: 7px 10px;
   border-radius: var(--r-s);
-  font-size: 12.5px;
-  font-weight: 500;
-  line-height: 1.35;
   border: 1px solid var(--line);
-  background: var(--card2);
+  background: color-mix(in srgb, var(--card2) 88%, #0b1216);
+}
+
+.channelHigh {
+  border-color: color-mix(in srgb, var(--pitch) 40%, var(--line));
+  background: var(--pitch-wash);
+}
+
+.channelMed {
+  border-color: color-mix(in srgb, var(--saffron) 35%, var(--line));
+  background: var(--saffron-wash);
+}
+
+.channelCode {
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   color: var(--text);
 }
 
-.signalText {
+.channelWave {
+  display: block;
+  width: 100%;
+  height: 22px;
   min-width: 0;
-  flex: 1;
-  overflow-wrap: anywhere;
 }
 
-.signalDot {
-  width: 7px;
-  height: 7px;
-  margin-top: 5px;
-  border-radius: 50%;
-  background: var(--text3);
-  flex-shrink: 0;
+.channelSide {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.signalHigh {
-  background: var(--pitch-wash);
+.eventFeed {
+  list-style: none;
+  margin: 0.55rem 0 0;
+  padding: 0.65rem 2px 0.35rem;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+
+.eventChip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  min-width: 4.6rem;
+  max-width: 7.2rem;
+  box-sizing: border-box;
+  padding: 8px 10px 7px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--line-soft);
+  background: #0b1216;
+  scroll-snap-align: start;
+  text-align: center;
+}
+
+.eventMin {
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pitch);
+  line-height: 1;
+}
+
+.eventEmoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  line-height: 1;
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+}
+
+.eventLabel {
+  display: block;
+  width: 100%;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text2);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event_goal {
+  border-color: color-mix(in srgb, var(--pitch) 35%, var(--line));
+}
+
+.event_pen {
   border-color: color-mix(in srgb, var(--pitch) 40%, var(--line));
 }
 
-.signalHigh .signalDot {
-  background: var(--pitch);
-  animation: breathe 2.6s var(--ease) infinite;
-}
-
-.signalMed {
+.event_yellow {
+  border-color: color-mix(in srgb, var(--saffron) 40%, var(--line));
   background: var(--saffron-wash);
-  border-color: color-mix(in srgb, var(--saffron) 35%, var(--line));
 }
 
-.signalMed .signalDot {
-  background: var(--saffron);
+.event_red {
+  border-color: color-mix(in srgb, var(--clay) 40%, var(--line));
+  background: var(--clay-wash);
+}
+
+.event_sub {
+  border-color: color-mix(in srgb, var(--zellij) 35%, var(--line));
+}
+
+.event_corner {
+  border-color: color-mix(in srgb, var(--saffron) 30%, var(--line));
+}
+
+.event_other {
+  border-color: var(--line-soft);
+}
+
+.wavePath {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wavePathMain {
+  stroke: var(--pitch);
+  stroke-width: 2;
+}
+
+.wavePathHot {
+  filter: drop-shadow(0 0 4px rgba(78, 156, 119, 0.45));
+}
+
+.wavePathCalm {
+  opacity: 0.72;
+  stroke-width: 1.5;
+}
+
+.wavePathHigh {
+  stroke: var(--pitch);
+}
+
+.wavePathMed {
+  stroke: var(--saffron);
+}
+
+.wavePathLow {
+  stroke: var(--text3);
+}
+
+.rhythm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  color: var(--text3);
+  background: var(--card2);
+}
+
+.rhythmHigh {
+  color: var(--pitch);
+  border-color: color-mix(in srgb, var(--pitch) 40%, var(--line));
+  background: var(--pitch-wash);
+}
+
+.rhythmMed {
+  color: var(--saffron);
+  border-color: color-mix(in srgb, var(--saffron) 35%, var(--line));
+  background: var(--saffron-wash);
+}
+
+.signalsHead {
+  margin: 0.15rem 0 0.45rem;
+  font-family: var(--font-data);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
 }
 
 @media (max-width: 620px) {
   .root {
-    padding: 0.85rem 0.8rem;
+    padding: 0.8rem;
   }
 
-  .gauges {
+  .scopeSvg {
+    height: 48px;
+  }
+
+  .traces {
     gap: 6px;
   }
 
-  .gauge {
-    padding: 8px 4px;
+  .trace {
+    padding: 7px 6px 5px;
   }
 
-  .label {
-    font-size: 9.5px;
-  }
-
-  .value {
-    font-size: 18px;
-  }
-
-  .hint {
-    font-size: 10px;
-  }
-
-  .signal {
-    font-size: 12px;
+  .sub {
+    display: none;
   }
 }
