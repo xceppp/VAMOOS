@@ -494,6 +494,39 @@ input {
   margin-bottom: 14px;
 }
 
+.pred-card__league-line {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.pred-heat-risk {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pred-heat-risk--green {
+  background: rgba(47, 158, 87, 0.18);
+  color: #9aefb3;
+}
+
+.pred-heat-risk--orange {
+  background: rgba(217, 119, 6, 0.18);
+  color: #ffd19a;
+}
+
+.pred-heat-risk--red {
+  background: rgba(192, 57, 43, 0.18);
+  color: #ffb4ad;
+}
+
 .pred-disclaimer {
   font-size: 11.5px;
   color: var(--text-muted);

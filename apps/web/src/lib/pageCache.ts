@@ -68,11 +68,49 @@ export interface DixonPickCache {
   bucket: 'live' | 'upcoming';
 }
 
+export interface LiveHeatPickCache {
+  id: string;
+  liveId: number;
+  league: string;
+  home: string;
+  away: string;
+  homeLogo?: string;
+  awayLogo?: string;
+  score: string;
+  minute: number;
+  status: string;
+  cornersHome: number;
+  cornersAway: number;
+  cornersTotal: number;
+  pNextCorner: number;
+  expectedExtraCorners: number;
+  cornerPick: string;
+  cornerConfidence: number;
+  cornerRisk: 'green' | 'orange' | 'red';
+  heatCorners: number;
+  shotsOnHome: number;
+  shotsOnAway: number;
+  shotsOnTotal: number;
+  pNextGoal: number;
+  expectedExtraGoals: number;
+  goalPick: string;
+  goalConfidence: number;
+  goalRisk: 'green' | 'orange' | 'red';
+  heatShots: number;
+  possession?: string;
+}
+
 export interface DixonBoardCache {
   at: string;
   model: 'dixon-coles-elo';
   live: DixonPickCache[];
   upcoming: DixonPickCache[];
+  liveHeat?: {
+    corners: LiveHeatPickCache[];
+    shots: LiveHeatPickCache[];
+    scanned: number;
+    notice: string | null;
+  };
   skipped: number;
   notice: string | null;
 }

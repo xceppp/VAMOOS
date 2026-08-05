@@ -3,7 +3,8 @@
  * Pure TypeScript engine — no Python on the host.
  */
 import { type DixonEnginePick, type DixonMarketSide, type DixonMarkets } from './dixonEngine.js';
-export type { DixonMarketSide, DixonMarkets };
+import { type LiveHeatPick } from './liveHeatScan.js';
+export type { DixonMarketSide, DixonMarkets, LiveHeatPick };
 export type DixonPick = DixonEnginePick & {
     bucket: 'live' | 'upcoming';
 };
@@ -12,6 +13,12 @@ export interface DixonBoard {
     model: 'dixon-coles-elo';
     live: DixonPick[];
     upcoming: DixonPick[];
+    liveHeat?: {
+        corners: LiveHeatPick[];
+        shots: LiveHeatPick[];
+        scanned: number;
+        notice: string | null;
+    };
     skipped: number;
     notice: string | null;
 }

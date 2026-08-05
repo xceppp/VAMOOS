@@ -5,6 +5,7 @@
 import { fetchFootballFeed, fetchUpcomingFeedMatches, providerIdToNumber, } from './liveFeed.js';
 import { matchCrowdScore } from './popularity.js';
 import { runDixonBatch, } from './dixonEngine.js';
+import { scanLiveHeat } from './liveHeatScan.js';
 const CACHE_MS = 45_000;
 let cache = null;
 function isInPlay(m) {
@@ -108,11 +109,12 @@ export async function buildDixonBoard(opts) {
     }
     live.sort((a, b) => b.heat - a.heat || b.confidence - a.confidence);
     upcoming.sort((a, b) => b.heat - a.heat || b.confidence - a.confidence);
+    const heat = await scanLiveHeat({ force: opts?.force });
     let notice = null;
     if (batch.error) {
         notice = `Dixon-Coles engine unavailable (${batch.error})`;
     }
-    else if (!live.length && !upcoming.length) {
+    else if (!live.length && !upcoming.length && !heat.corners.length && !heat.shots.length) {
         notice =
             batch.skipped.length > 0
                 ? `No Dixon-Coles packs matched current fixtures (${batch.skipped.length} skipped). Covered: PL, La Liga, Serie A, Bundesliga, Ligue 1, MLS, Liga MX, UCL.`
@@ -123,8 +125,14 @@ export async function buildDixonBoard(opts) {
         model: 'dixon-coles-elo',
         live,
         upcoming,
+        liveHeat: {
+            corners: heat.corners,
+            shots: heat.shots,
+            scanned: heat.scanned,
+            notice: heat.notice,
+        },
         skipped: batch.skipped.length,
-        notice,
+        notice: notice ?? heat.notice,
     };
     cache = { at: Date.now(), data };
     return data;
