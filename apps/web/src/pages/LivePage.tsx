@@ -50,6 +50,11 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
 
   return (
     <section className="page">
+      <div className="page__intro">
+        <h1>{t('liveTitle')}</h1>
+        <p>{sort === 'ending' ? t('liveEnding') : t('livePopular')}</p>
+      </div>
+
       <div className="sort-bar" role="group" aria-label={t('sortAria')}>
         <button
           type="button"
@@ -76,6 +81,7 @@ export function LivePage({ matches, mode, isFav, onToggle, pulseId }: LivePagePr
           <div className="empty">
             <i className="ti ti-ball-football" aria-hidden />
             <p>{t('noLive')}</p>
+            <p className="muted">{t('liveEmptyGuide')}</p>
           </div>
         )
       ) : sort === 'ending' ? (

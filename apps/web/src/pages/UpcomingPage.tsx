@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AdSlot } from '../components/AdSlot';
 import { MatchCard } from '../components/MatchCard';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
@@ -92,7 +93,10 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
 
   return (
     <section className="page">
-      <p className="section-label">{t('upcomingTitle')}</p>
+      <div className="page__intro">
+        <h1>{t('upcomingTitle')}</h1>
+        <p>{t('upcomingIntro')}</p>
+      </div>
 
       <div className="day-bar" role="tablist" aria-label={t('upcomingDaysAria')}>
         {Array.from({ length: UPCOMING_DAYS }, (_, offset) => (
@@ -126,27 +130,31 @@ export function UpcomingPage({ isFav, onToggle }: UpcomingPageProps) {
           <p>{t('noUpcoming')}</p>
         </div>
       ) : (
-        upcomingGrouped.map((block) => (
-          <section key={block.key} className="league-block league-block--upcoming">
-            <p className="section-label">
-              {block.logo ? (
-                <img src={block.logo} alt="" className="league-crest" width={14} height={14} />
-              ) : null}
-              {block.name}
-              {block.country ? <em className="league-country">{block.country}</em> : null}
-            </p>
-            <div className="match-list">
-              {block.matches.map((m) => (
-                <MatchCard
-                  key={m.id}
-                  match={m}
-                  favorited={isFav(m.id)}
-                  onToggleFavorite={onToggle}
-                />
-              ))}
-            </div>
-          </section>
-        ))
+        <>
+          <AdSlot format="banner" className="ad-slot--feed" />
+          {upcomingGrouped.map((block, bi) => (
+            <section key={block.key} className="league-block league-block--upcoming">
+              <p className="section-label">
+                {block.logo ? (
+                  <img src={block.logo} alt="" className="league-crest" width={14} height={14} />
+                ) : null}
+                {block.name}
+                {block.country ? <em className="league-country">{block.country}</em> : null}
+              </p>
+              <div className="match-list">
+                {block.matches.map((m) => (
+                  <MatchCard
+                    key={m.id}
+                    match={m}
+                    favorited={isFav(m.id)}
+                    onToggleFavorite={onToggle}
+                  />
+                ))}
+              </div>
+              {bi === 0 ? <AdSlot format="infeed" className="ad-slot--feed" /> : null}
+            </section>
+          ))}
+        </>
       )}
     </section>
   );

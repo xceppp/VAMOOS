@@ -17,12 +17,15 @@ import { useGoalAlertQueue } from './hooks/useGoalAlertQueue';
 import { useLiveSocket } from './hooks/useLiveSocket';
 import { apiUrl } from './lib/apiBase';
 import { reloadAudioFromDb } from './lib/goalSong';
+import { AboutPage } from './pages/AboutPage';
 import { FavoritesPage } from './pages/FavoritesPage';
+import { HowPredictionsPage } from './pages/HowPredictionsPage';
 import { LeaguesPage } from './pages/LeaguesPage';
 import { LivePage } from './pages/LivePage';
 import { MatchDetailPage } from './pages/MatchDetailPage';
 import { NotifyPage } from './pages/NotifyPage';
 import { PredictionsPage } from './pages/PredictionsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { UpcomingPage } from './pages/UpcomingPage';
 import { ThemeProvider } from './theme/ThemeProvider';
 
@@ -200,6 +203,9 @@ function AppRoutes() {
               />
             }
           />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/how-predictions-work" element={<HowPredictionsPage />} />
           <Route path="/settings" element={<Navigate to="/notify" replace />} />
           <Route
             path="*"

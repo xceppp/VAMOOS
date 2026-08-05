@@ -33,7 +33,8 @@ export const translations = {
     liveTitle: 'Live',
     liveDemo: 'Demo mode — simulated matches so you can test favorites and your goal song.',
     liveEnding: 'Closest to full time first — late games rise to the top.',
-    livePopular: 'Live scores — updates every few seconds.',
+    livePopular: 'Live scores — updates every few seconds. Tap a match for stats, timeline, and a short in-play read.',
+    liveEmptyGuide: 'While you wait, browse Upcoming fixtures or check Predictions for tonight’s models.',
     sortPopular: 'Popular',
     sortEnding: 'Ending soon',
     sortAria: 'Sort matches',
@@ -69,6 +70,11 @@ export const translations = {
 
     predTitle: 'Predictions',
     predIntro: 'Dixon-Coles + Elo · live & upcoming',
+    predGuideLive:
+      'Live heat ranks in-play matches by corner pressure and shots on target, then estimates the chance of more action before the whistle.',
+    predGuideUpcoming:
+      'Upcoming picks use a Dixon-Coles score model blended with Elo form for 1X2, totals, BTTS, and likely scorelines.',
+    predGuideLink: 'How the model works',
     predModelDc: 'Dixon-Coles · Elo · calibrated markets',
     predModelLiveHeat: 'Live heat · corners & shots on target',
     predBucketAria: 'Live or upcoming',
@@ -154,6 +160,71 @@ export const translations = {
     autoRefresh: 'Auto-refresh on',
     loading: 'Loading…',
     liveMatchStats: 'Live match stats',
+    matchAnalysisTitle: 'In-play read',
+    matchAnalysisPending: 'Stats will unlock a short match read once the feed publishes possession, shots, or corners.',
+    matchAnalysisPoss: '{team} currently hold about {pct}% of the ball.',
+    matchAnalysisShots: 'Shots on target: {home} {hs}–{as} {away}.',
+    matchAnalysisCorners: 'Corners: {home} {hc}–{ac} {away}.',
+
+    aboutTitle: 'About Vamoos',
+    aboutP1:
+      'Vamoos is a personal football livescores app: live scores, upcoming fixtures, favorites with custom goal alerts, and statistical predictions.',
+    aboutP2:
+      'We focus on clear match data — scoreboards, leagues, timelines, lineups — plus transparent model output so you can see why a pick is ranked the way it is.',
+    aboutP3:
+      'Predictions are educational analysis, not betting advice. Always treat model probabilities as one signal among many.',
+    aboutWhatTitle: 'What you can do',
+    aboutWhatLive: 'Follow live matches with league grouping and ending-soon sorting.',
+    aboutWhatPred: 'Browse Dixon-Coles / Elo markets and live corner or shot heat.',
+    aboutWhatFav: 'Star matches and play your own goal song when they score.',
+
+    privacyTitle: 'Privacy',
+    privacyUpdated: 'Last updated: August 2026',
+    privacyP1:
+      'This page explains what Vamoos stores on your device and how advertising may work when ads are shown on content pages.',
+    privacyDataTitle: 'Data we store locally',
+    privacyDataP: 'Most preferences stay in your browser or device. We do not require an account.',
+    privacyDataLocal: 'Language and UI preferences in local storage.',
+    privacyDataFav: 'Favorite match IDs so your starred list survives reloads.',
+    privacyDataNotify: 'Alert settings and an optional custom goal song file you upload.',
+    privacyAdsTitle: 'Advertising (Google AdSense)',
+    privacyAdsP:
+      'On pages with publisher content (live scores, fixtures, predictions, match detail), we may show Google AdSense ads. Ads are not shown on Settings or empty Favorites.',
+    privacyAdsCookies:
+      'Google and its partners may use cookies or similar technologies to serve and measure ads.',
+    privacyAdsPersonal:
+      'Depending on your region and consent choices, ads may be personalized or non-personalized.',
+    privacyAdsOptOut:
+      'You can manage ad personalization in Google’s Ads Settings (adssettings.google.com) and through your browser controls.',
+    privacyContactTitle: 'Questions',
+    privacyContactP: 'For privacy questions about this app, use the contact channel listed on your hosting or GitHub repository.',
+
+    howTitle: 'How predictions work',
+    howBackPred: '← Back to Predictions',
+    howIntro:
+      'Vamoos predictions are statistical estimates built from historical league packs and live match signals. They are not tips from tipsters.',
+    howDcTitle: 'Dixon-Coles + Elo (upcoming)',
+    howDcP1:
+      'For scheduled matches we estimate expected goals with a Dixon-Coles bivariate Poisson model, then blend in Elo ratings so recent form and strength of schedule matter.',
+    howDcP2:
+      'From the score matrix we derive market probabilities: match result (1X2), over/under totals, both teams to score, and a most-likely scoreline.',
+    howMarketsTitle: 'Markets you will see',
+    howMkt1x2: '1X2 — home win, draw, or away win probabilities.',
+    howMktGoals: 'Goals markets — chance of more goals, over 2.5 / 3.5.',
+    howMktBtts: 'BTTS — both teams to score.',
+    howMktLive: 'Live next-goal style signals when a match is in play.',
+    howHeatTitle: 'Live heat (corners & shots)',
+    howHeatP:
+      'During live games we rank fixtures by current corner totals and shots on target, then estimate the chance of more corners or a goal before full time. Strong heat means pressure is already visible on the pitch.',
+    howLimitTitle: 'Limits',
+    howLimitP:
+      'Models can be wrong. Injuries, red cards, weather, and low-sample leagues reduce accuracy. Use predictions as context next to the live scoreboard — never as a guarantee.',
+
+    footerNav: 'Site information',
+    footerAbout: 'About',
+    footerHow: 'How predictions work',
+    footerPrivacy: 'Privacy',
+    footerCopy: '© Vamoos · football livescores & analysis',
 
     adLabel: 'Advertisement',
     notifTitle: 'VAMOOS',
@@ -191,7 +262,8 @@ export const translations = {
     liveTitle: 'لايف',
     liveDemo: 'مود تجريبي — ماتشات مصاوبين باش تجرب المفضلة وأغنية الهدف.',
     liveEnding: 'اللي قراب يسالو اللولين — الماتشات اللي ف الآخر فوق.',
-    livePopular: 'النتائج لايف — كيتحدّثو كل شوية.',
+    livePopular: 'النتائج لايف — كيتحدّثو كل شوية. ضغط على ماتش باش تشوف الإحصائيات والأحداث وقراية قصيرة.',
+    liveEmptyGuide: 'تسنى شوية، شوف الجايين ولا التوقعات على الماتشات ديال اليوم.',
     sortPopular: 'المشهورين',
     sortEnding: 'غادي يساليو',
     sortAria: 'ترتيب الماتشات',
@@ -227,6 +299,11 @@ export const translations = {
 
     predTitle: 'التوقعات',
     predIntro: 'Dixon-Coles + Elo · لايف والجايين',
+    predGuideLive:
+      'السخونية لايف كترتّب الماتشات على الكورنرات والتسديدات ع المرمى، ومن بعد كتحسب فرصة يزيد الفعل قبل الصفّارة.',
+    predGuideUpcoming:
+      'التوقعات الجايين كيستعملو موديل Dixon-Coles مع Elo باش يعطيو 1X2، الأهداف، الجوج كيسجلو، والسكور الأقرب.',
+    predGuideLink: 'كيفاش خدام الموديل',
     predModelDc: 'Dixon-Coles · Elo · أسواق معايرة',
     predModelLiveHeat: 'سخونية لايف · كورنرات وتسديدات ع المرمى',
     predBucketAria: 'لايف ولا جاي',
@@ -312,6 +389,71 @@ export const translations = {
     autoRefresh: 'تحديث أوتوماتيك',
     loading: 'كيتحمّل…',
     liveMatchStats: 'إحصائيات الماتش لايف',
+    matchAnalysisTitle: 'قراية لايف',
+    matchAnalysisPending: 'ملي توصل الإحصائيات (الاستحواذ، التسديدات، الكورنرات) غادي تبان قراية قصيرة على الماتش.',
+    matchAnalysisPoss: '{team} دابا عندو تقريبا {pct}% من الكرة.',
+    matchAnalysisShots: 'التسديدات ع المرمى: {home} {hs}–{as} {away}.',
+    matchAnalysisCorners: 'الكورنرات: {home} {hc}–{ac} {away}.',
+
+    aboutTitle: 'على Vamoos',
+    aboutP1:
+      'Vamoos تطبيق شخصي للنتائج لايف: السكور، الماتشات الجايين، المفضلة مع تنبيهات الأهداف، وتوقعات إحصائية.',
+    aboutP2:
+      'كنركّزو على داتا واضحة — السكور، الدوريات، الأحداث، التشكيلات — مع موديل شفاف باش تفهم علاش جا الترتيب بحال هكا.',
+    aboutP3:
+      'التوقعات تحليل تعليمي، ماشي نصيحة باش تراهن. الاحتمالات إشارة وحدة من بزاف.',
+    aboutWhatTitle: 'شنو تقدر دير',
+    aboutWhatLive: 'تابع الماتشات لايف مرتبين بالدوري ولا اللي غادي يساليو.',
+    aboutWhatPred: 'شوف أسواق Dixon-Coles / Elo و سخونية الكورنرات والتسديدات.',
+    aboutWhatFav: 'نجّم الماتشات وشغّل الأغنية ديالك ملي يسجلو.',
+
+    privacyTitle: 'الخصوصية',
+    privacyUpdated: 'آخر تحديث: غشت 2026',
+    privacyP1:
+      'هاد الصفحة كتشرح شنو كيتخزّن ف الجهاز ديالك وكيفاش الإعلانات كتخدم ملي كيبانو ف صفحات المحتوى.',
+    privacyDataTitle: 'البيانات المحلية',
+    privacyDataP: 'غالب التفضيلات كيبقاو ف البروزر ولا الجهاز. ما خصّكش حساب.',
+    privacyDataLocal: 'اللغة وإعدادات الواجهة ف التخزين المحلي.',
+    privacyDataFav: 'معرفات الماتشات المفضلة باش القائمة تبقى بعد التحديث.',
+    privacyDataNotify: 'إعدادات التنبيهات وأغنية الهدف إلا رفعتيها.',
+    privacyAdsTitle: 'الإعلانات (Google AdSense)',
+    privacyAdsP:
+      'ف الصفحات اللي فيها محتوى (لايف، الجايين، التوقعات، تفاصيل الماتش) نقدرو نوريو إعلانات AdSense. ما كيبانوش ف الإعدادات ولا المفضلة الفاضية.',
+    privacyAdsCookies:
+      'Google والشركاء ديالو يقدرو يستعملو الكوكيز باش يوريو ويقيسو الإعلانات.',
+    privacyAdsPersonal:
+      'على حسب المنطقة والاختيار ديالك، الإعلانات يقدرو يكونو مخصّصين ولا عامّين.',
+    privacyAdsOptOut:
+      'تقدر تسيّر تخصيص الإعلانات من إعدادات إعلانات Google (adssettings.google.com) ومن البروزر ديالك.',
+    privacyContactTitle: 'أسئلة',
+    privacyContactP: 'إلا عندك سؤال على الخصوصية، استعمل قناة التواصل ف الاستضافة ولا الريبو على GitHub.',
+
+    howTitle: 'كيفاش خدامين التوقعات',
+    howBackPred: '→ رجوع للتوقعات',
+    howIntro:
+      'توقعات Vamoos تقديرات إحصائية من باكات الدوريات التاريخية وإشارات لايف. ماشي نصايح من ناس.',
+    howDcTitle: 'Dixon-Coles + Elo (الجايين)',
+    howDcP1:
+      'للماتشات المجدولين كنقدّرو الأهداف المتوقعة بموديل Dixon-Coles، ومن بعد كنخلطو Elo باش الفورمة والقوة يدخلو ف الحساب.',
+    howDcP2:
+      'من ماتريس السكور كنستخرجو احتمالات الأسواق: النتيجة (1X2)، الأهداف، الجوج كيسجلو، والسكور الأقرب.',
+    howMarketsTitle: 'الأسواق اللي غادي تشوف',
+    howMkt1x2: '1X2 — فوز الدار، التعادل، ولا فوز الضيف.',
+    howMktGoals: 'أسواق الأهداف — فرصة أهداف زايدة، فوق 2.5 / 3.5.',
+    howMktBtts: 'BTTS — الجوج كيسجلو.',
+    howMktLive: 'إشارات الهدف الجاي ملي الماتش لايف.',
+    howHeatTitle: 'السخونية لايف (كورنرات وتسديدات)',
+    howHeatP:
+      'ف الماتشات لايف كنرتّبو على مجموع الكورنرات والتسديدات ع المرمى، ومن بعد كنقدّرو فرصة يزيدو الكورنرات ولا هدف قبل النهاية. سخونية قوية = ضغط باين ف الملعب.',
+    howLimitTitle: 'الحدود',
+    howLimitP:
+      'الموديل يقدر يغلط. الإصابات، الكارطات، الطقس، والدوريات الصغيرة كينقصو الدقة. استعمل التوقعات كسياق حدا السكور — ماشي ضمان.',
+
+    footerNav: 'معلومات الموقع',
+    footerAbout: 'على التطبيق',
+    footerHow: 'كيفاش التوقعات',
+    footerPrivacy: 'الخصوصية',
+    footerCopy: '© Vamoos · نتائج لايف وتحليل',
 
     adLabel: 'إعلان',
     notifTitle: 'VAMOOS',

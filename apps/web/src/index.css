@@ -33,6 +33,9 @@ input {
 
 .app-shell {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
   max-width: 960px;
   margin: 0 auto;
   padding: calc(22px + env(safe-area-inset-top, 0px))
@@ -721,6 +724,120 @@ input {
 
 .page--narrow {
   max-width: 560px;
+}
+
+.page--content {
+  max-width: 640px;
+}
+
+.page-lede {
+  margin: 0 0 1rem;
+  max-width: 40rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.inline-link {
+  color: var(--accent, #6ec8ff);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.content-article {
+  animation: rise 0.55s ease both;
+}
+
+.content-article h1 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-ui);
+  font-size: clamp(1.55rem, 4.5vw, 2rem);
+  letter-spacing: -0.01em;
+  font-weight: 700;
+}
+
+.content-article h2 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.content-article p,
+.content-article li {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.content-article ul {
+  margin: 0.4rem 0 1rem;
+  padding-inline-start: 1.2rem;
+}
+
+.content-article__note {
+  margin-top: 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.88rem;
+}
+
+.match-analysis {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  animation: rise 0.5s ease both;
+}
+
+.match-analysis__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.match-analysis p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.site-footer {
+  margin-top: auto;
+  padding: 1.25rem 1rem 5.5rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.site-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem 1.1rem;
+  margin-bottom: 0.55rem;
+}
+
+.site-footer__nav a {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.site-footer__nav a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.site-footer__copy {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  opacity: 0.85;
 }
 
 .league-block {

@@ -228,8 +228,12 @@ export function PredictionsPage() {
       <p className="pred-model-tag">
         {tab === 'live' ? t('predModelLiveHeat') : t('predModelDc')}
       </p>
-
-      <AdSlot format="banner" className="ad-slot--feed" />
+      <p className="page-lede muted">
+        {tab === 'live' ? t('predGuideLive') : t('predGuideUpcoming')}{' '}
+        <Link to="/how-predictions-work" className="inline-link">
+          {t('predGuideLink')}
+        </Link>
+      </p>
 
       <div className="sort-bar pred-bucket-bar" role="group" aria-label={t('predBucketAria')}>
         <button
@@ -319,6 +323,10 @@ export function PredictionsPage() {
         <p className="pred-notice">{board.liveHeat.notice}</p>
       ) : null}
       {tab === 'upcoming' && board?.notice ? <p className="pred-notice">{board.notice}</p> : null}
+
+      {(tab === 'live' ? visibleHeat : visibleUpcoming).length > 0 ? (
+        <AdSlot format="banner" className="ad-slot--feed" />
+      ) : null}
 
       <div className="pred-list">
         {tab === 'live'

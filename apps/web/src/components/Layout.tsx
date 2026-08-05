@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
-import { AdSlot } from './AdSlot';
+import { SiteFooter } from './SiteFooter';
 import { TabNav, type TabItem } from './TabNav';
 
 interface LayoutProps {
@@ -67,11 +67,11 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
 
       <TabNav items={tabs} />
 
-      <AdSlot format="banner" className="ad-slot--top" />
       {notice && rateLimited ? (
         <div className="notice-banner notice-banner--warn">{notice}</div>
       ) : null}
       <main className="main">{children}</main>
+      <SiteFooter />
     </div>
   );
 }

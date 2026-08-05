@@ -25,8 +25,7 @@ export function FavoritesPage({
   return (
     <section className="page">
       <p className="section-label">{t('favTitle')}</p>
-
-      <AdSlot format="banner" className="ad-slot--feed" />
+      <p className="page-lede muted">{t('favIntro')}</p>
 
       {!favoriteIds.length ? (
         <div className="empty">
@@ -42,18 +41,21 @@ export function FavoritesPage({
           ) : null}
         </div>
       ) : (
-        <div className="match-list">
-          {favMatches.map((m) => (
-            <MatchCard
-              key={m.id}
-              match={m}
-              favorited={isFav(m.id)}
-              onToggleFavorite={onToggle}
-              highlight={pulseId === m.id}
-              hideLeague={false}
-            />
-          ))}
-        </div>
+        <>
+          <AdSlot format="banner" className="ad-slot--feed" />
+          <div className="match-list">
+            {favMatches.map((m) => (
+              <MatchCard
+                key={m.id}
+                match={m}
+                favorited={isFav(m.id)}
+                onToggleFavorite={onToggle}
+                highlight={pulseId === m.id}
+                hideLeague={false}
+              />
+            ))}
+          </div>
+        </>
       )}
     </section>
   );

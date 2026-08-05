@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdSlot } from '../components/AdSlot';
 import { SettingsToggle } from '../components/SettingsToggle';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNotifySettings } from '../hooks/useNotifySettings';
@@ -46,8 +45,7 @@ export function NotifyPage() {
   return (
     <section className="page page--narrow">
       <p className="section-label">{t('notifyTitle')}</p>
-
-      <AdSlot format="banner" className="ad-slot--feed" />
+      <p className="page-lede muted">{t('notifyIntro')}</p>
 
       <div className="settings">
         <div className="settings__row">

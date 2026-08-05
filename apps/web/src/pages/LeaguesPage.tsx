@@ -53,7 +53,7 @@ export function LeaguesPage({ matches, isFav, onToggle, pulseId }: LeaguesPagePr
         />
       </label>
 
-      <AdSlot format="banner" className="ad-slot--feed" />
+      {leagues.length > 0 ? <AdSlot format="banner" className="ad-slot--feed" /> : null}
 
       {selected ? (
         <div className="league-detail">

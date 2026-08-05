@@ -58,6 +58,59 @@ interface MatchDetailPageProps {
   onToggle: (id: number) => void;
 }
 
+function numStat(stats: MatchStatRow[], type: string): { home: number; away: number } | null {
+  const row = stats.find((s) => s.type.toLowerCase() === type.toLowerCase());
+  if (!row) return null;
+  const home = Number(String(row.home ?? '').replace('%', ''));
+  const away = Number(String(row.away ?? '').replace('%', ''));
+  if (!Number.isFinite(home) || !Number.isFinite(away)) return null;
+  return { home, away };
+}
+
+function buildMatchAnalysis(
+  homeName: string,
+  awayName: string,
+  stats: MatchStatRow[],
+  t: ReturnType<typeof useI18n>['t'],
+): string | null {
+  if (!stats.length) return null;
+  const poss = numStat(stats, 'Ball Possession') ?? numStat(stats, 'Possession');
+  const shots =
+    numStat(stats, 'Shots on Goal') ??
+    numStat(stats, 'Shots on Target') ??
+    numStat(stats, 'Total Shots');
+  const corners = numStat(stats, 'Corner Kicks') ?? numStat(stats, 'Corners');
+
+  const bits: string[] = [];
+  if (poss) {
+    const leader = poss.home >= poss.away ? homeName : awayName;
+    const share = Math.max(poss.home, poss.away);
+    bits.push(t('matchAnalysisPoss', { team: leader, pct: Math.round(share) }));
+  }
+  if (shots) {
+    bits.push(
+      t('matchAnalysisShots', {
+        home: homeName,
+        away: awayName,
+        hs: shots.home,
+        as: shots.away,
+      }),
+    );
+  }
+  if (corners) {
+    bits.push(
+      t('matchAnalysisCorners', {
+        home: homeName,
+        away: awayName,
+        hc: corners.home,
+        ac: corners.away,
+      }),
+    );
+  }
+  if (!bits.length) return null;
+  return bits.join(' ');
+}
+
 export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPageProps) {
   const { t } = useI18n();
   const { id } = useParams();
@@ -154,6 +207,11 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
 
   const activeStats = periodTabs[statTab]?.statistics ?? data?.statistics ?? [];
 
+  const analysis = useMemo(() => {
+    if (!match) return null;
+    return buildMatchAnalysis(match.home.name, match.away.name, activeStats, t);
+  }, [match, activeStats, t]);
+
   return (
     <section className="page page--detail">
       <Link to="/" className="back-link">
@@ -212,6 +270,15 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
               {data ? ` · ${t('autoRefresh')}` : ''}
             </p>
           </header>
+
+          {analysis ? (
+            <div className="match-analysis">
+              <h2 className="match-analysis__title">{t('matchAnalysisTitle')}</h2>
+              <p>{analysis}</p>
+            </div>
+          ) : (
+            <p className="page-lede muted">{t('matchAnalysisPending')}</p>
+          )}
 
           <AdSlot format="banner" className="ad-slot--feed" />
 
