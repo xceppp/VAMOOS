@@ -3,6 +3,12 @@ import { Link, useParams } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
+import {
+  buildLivePulse,
+  featuredStatRows,
+  type PulseLevel,
+  type PulseSignal,
+} from '../lib/livePulse';
 import type { LiveMatch } from '../types';
 
 interface MatchStatRow {
@@ -58,13 +64,66 @@ interface MatchDetailPageProps {
   onToggle: (id: number) => void;
 }
 
-function numStat(stats: MatchStatRow[], type: string): { home: number; away: number } | null {
-  const row = stats.find((s) => s.type.toLowerCase() === type.toLowerCase());
-  if (!row) return null;
-  const home = Number(String(row.home ?? '').replace('%', ''));
-  const away = Number(String(row.away ?? '').replace('%', ''));
-  if (!Number.isFinite(home) || !Number.isFinite(away)) return null;
-  return { home, away };
+function pct(n: number): string {
+  return `${Math.round(Math.max(0, Math.min(1, n)) * 100)}%`;
+}
+
+function signalText(
+  signal: PulseSignal,
+  t: ReturnType<typeof useI18n>['t'],
+): string {
+  const team = signal.teamName ?? '';
+  switch (signal.labelKey) {
+    case 'pulseHighAttack':
+      return t('pulseHighAttack', { team });
+    case 'pulsePressing':
+      return team ? t('pulsePressingTeam', { team }) : t('pulsePressing');
+    case 'pulseCornerStorm':
+      return t('pulseCornerStorm');
+    case 'pulseGoalThreat':
+      return t('pulseGoalThreat');
+    case 'pulseQuiet':
+      return t('pulseQuiet');
+    case 'pulseShotHeavy':
+      return team ? t('pulseShotHeavyTeam', { team }) : t('pulseShotHeavy');
+    case 'pulsePossDominant':
+      return t('pulsePossDominant', { team });
+    default:
+      return '';
+  }
+}
+
+function DualMeter({
+  label,
+  home,
+  away,
+  kind,
+}: {
+  label: string;
+  home: number;
+  away: number;
+  kind: 'percent' | 'count';
+}) {
+  const total = home + away;
+  const homePct = total > 0 ? (home / total) * 100 : 50;
+  const homeLabel = kind === 'percent' ? `${Math.round(home)}%` : String(home);
+  const awayLabel = kind === 'percent' ? `${Math.round(away)}%` : String(away);
+  const homeLeads = home > away;
+  const awayLeads = away > home;
+
+  return (
+    <li className="dual-meter">
+      <div className="dual-meter__top">
+        <strong className={`num${homeLeads ? ' is-lead' : ''}`}>{homeLabel}</strong>
+        <span>{label}</span>
+        <strong className={`num${awayLeads ? ' is-lead' : ''}`}>{awayLabel}</strong>
+      </div>
+      <div className="dual-meter__track" aria-hidden>
+        <i style={{ width: `${homePct}%` }} />
+        <b style={{ width: `${100 - homePct}%` }} />
+      </div>
+    </li>
+  );
 }
 
 export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPageProps) {
@@ -77,6 +136,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
     () => !Number.isFinite(matchId) || !liveMatches.some((m) => m.id === matchId),
   );
   const [statTab, setStatTab] = useState(0);
+  const [showAllStats, setShowAllStats] = useState(false);
 
   const liveHint = useMemo(
     () => liveMatches.find((m) => m.id === matchId) ?? null,
@@ -94,7 +154,6 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
     const hasHint = liveMatches.some((m) => m.id === matchId);
 
     const load = (soft = false) => {
-      // Never blank the scoreboard when we already have live data for this match.
       if (!soft && !hasHint && !data) {
         setLoading(true);
         setError(null);
@@ -132,7 +191,6 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when match id changes
   }, [matchId]);
 
-  // Prefer live WS scoreboard when present — detail payload can lag behind a goal/FT.
   const match = useMemo(() => {
     const base = data?.match ?? liveHint;
     if (!base) return null;
@@ -146,6 +204,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
       goals: liveHint.goals,
       status: liveHint.status,
       elapsed: liveHint.elapsed,
+      stats: liveHint.stats ?? data.match.stats,
     };
   }, [data, liveHint]);
   const favorited = Number.isFinite(matchId) ? isFav(matchId) : false;
@@ -159,35 +218,47 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
 
   useEffect(() => {
     setStatTab(0);
+    setShowAllStats(false);
   }, [matchId, periodTabs.length]);
 
   const activeStats = periodTabs[statTab]?.statistics ?? data?.statistics ?? [];
 
-  const stripStats = useMemo(() => {
-    const cells: Array<{ label: string; home: number; away: number }> = [];
-    const poss = numStat(activeStats, 'Ball Possession') ?? numStat(activeStats, 'Possession');
-    const sot =
-      numStat(activeStats, 'Shots on Goal') ?? numStat(activeStats, 'Shots on Target');
-    const corners = numStat(activeStats, 'Corner Kicks') ?? numStat(activeStats, 'Corners');
-    if (poss) cells.push({ label: t('statPoss'), home: poss.home, away: poss.away });
-    if (sot) cells.push({ label: t('statSot'), home: sot.home, away: sot.away });
-    if (corners) cells.push({ label: t('statCorners'), home: corners.home, away: corners.away });
-    if (match?.stats?.possessionHome != null && match.stats.possessionAway != null && !poss) {
-      cells.push({
-        label: t('statPoss'),
-        home: match.stats.possessionHome,
-        away: match.stats.possessionAway,
-      });
-    }
-    if (match?.stats?.cornersHome != null && match.stats.cornersAway != null && !corners) {
-      cells.push({
-        label: t('statCorners'),
-        home: match.stats.cornersHome,
-        away: match.stats.cornersAway,
-      });
-    }
-    return cells;
-  }, [activeStats, match, t]);
+  const pulse = useMemo(() => {
+    if (!match) return null;
+    return buildLivePulse({
+      status: match.status,
+      elapsed: match.elapsed,
+      homeName: match.home.name,
+      awayName: match.away.name,
+      goalsHome: match.goals.home ?? 0,
+      goalsAway: match.goals.away ?? 0,
+      rows: activeStats,
+      fallbackPoss:
+        match.stats?.possessionHome != null && match.stats.possessionAway != null
+          ? { home: match.stats.possessionHome, away: match.stats.possessionAway }
+          : null,
+      fallbackCorners:
+        match.stats?.cornersHome != null && match.stats.cornersAway != null
+          ? { home: match.stats.cornersHome, away: match.stats.cornersAway }
+          : null,
+    });
+  }, [match, activeStats]);
+
+  const featured = useMemo(
+    () => (pulse ? featuredStatRows(activeStats, pulse.key) : []),
+    [activeStats, pulse],
+  );
+
+  const extraStats = useMemo(() => {
+    const featuredTypes = new Set(featured.map((f) => f.type.toLowerCase()));
+    return activeStats.filter((row) => {
+      const key = row.type.toLowerCase();
+      if ([...featuredTypes].some((f) => key === f.toLowerCase() || key.includes(f.toLowerCase()))) {
+        return false;
+      }
+      return true;
+    });
+  }, [activeStats, featured]);
 
   return (
     <section className="page page--detail">
@@ -209,7 +280,11 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
 
             <div className="detail-hero__scoreboard">
               <div className="detail-hero__team">
-                {match.home.logo ? <img src={match.home.logo} alt="" /> : <span className="crest crest--fallback num">{match.home.name.slice(0, 3)}</span>}
+                {match.home.logo ? (
+                  <img src={match.home.logo} alt="" />
+                ) : (
+                  <span className="crest crest--fallback num">{match.home.name.slice(0, 3)}</span>
+                )}
                 <strong>{match.home.name}</strong>
               </div>
               <div className="detail-hero__score">
@@ -231,30 +306,14 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
                 </em>
               </div>
               <div className="detail-hero__team detail-hero__team--away">
-                {match.away.logo ? <img src={match.away.logo} alt="" /> : <span className="crest crest--fallback num">{match.away.name.slice(0, 3)}</span>}
+                {match.away.logo ? (
+                  <img src={match.away.logo} alt="" />
+                ) : (
+                  <span className="crest crest--fallback num">{match.away.name.slice(0, 3)}</span>
+                )}
                 <strong>{match.away.name}</strong>
               </div>
             </div>
-
-            {stripStats.length > 0 ? (
-              <div className="stat-strip">
-                {stripStats.map((cell) => {
-                  const sum = cell.home + cell.away || 1;
-                  return (
-                    <div key={cell.label} className="stat-strip__cell">
-                      <span className="stat-strip__label">{cell.label}</span>
-                      <span className="stat-strip__vals num">
-                        {cell.home} – {cell.away}
-                      </span>
-                      <span className="stat-strip__bar" aria-hidden>
-                        <i style={{ width: `${(cell.home / sum) * 100}%` }} />
-                        <b style={{ width: `${(cell.away / sum) * 100}%` }} />
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
 
             <div className="detail-hero__actions">
               <button
@@ -274,17 +333,57 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
             </p>
           </header>
 
+          {pulse?.live ? (
+            <section className="live-pulse" aria-label={t('pulseTitle')}>
+              <div className="live-pulse__head">
+                <h2>
+                  <span className="live-dot" aria-hidden />
+                  {t('pulseTitle')}
+                </h2>
+                <p className="live-pulse__sub">{t('pulseSub')}</p>
+              </div>
+
+              <div className="live-pulse__gauges">
+                <div className={`pulse-gauge pulse-gauge--${pulse.goalLevel}`}>
+                  <span className="pulse-gauge__label">{t('pulseGoalChance')}</span>
+                  <strong className="num">{pct(pulse.pNextGoal)}</strong>
+                  <span className="pulse-gauge__hint">{t('pulseLevel', { level: levelWord(pulse.goalLevel, t) })}</span>
+                </div>
+                <div className={`pulse-gauge pulse-gauge--${pulse.cornerLevel}`}>
+                  <span className="pulse-gauge__label">{t('pulseCornerChance')}</span>
+                  <strong className="num">{pct(pulse.pNextCorner)}</strong>
+                  <span className="pulse-gauge__hint">{t('pulseLevel', { level: levelWord(pulse.cornerLevel, t) })}</span>
+                </div>
+                <div className={`pulse-gauge pulse-gauge--${levelFromIntensity(pulse.intensity)}`}>
+                  <span className="pulse-gauge__label">{t('pulseIntensity')}</span>
+                  <strong className="num">{Math.round(pulse.intensity * 100)}</strong>
+                  <span className="pulse-gauge__hint">{t('pulseTempo')}</span>
+                </div>
+              </div>
+
+              <ul className="pulse-signals">
+                {pulse.signals.map((s) => (
+                  <li
+                    key={s.id}
+                    className={`pulse-signal pulse-signal--${s.level} pulse-signal--${s.side}`}
+                  >
+                    <span className="pulse-signal__dot" aria-hidden />
+                    {signalText(s, t)}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           <AdSlot format="banner" className="ad-slot--feed" />
 
           {error ? <p className="settings__msg">{error}</p> : null}
 
-          <div className="detail-grid">
-            <section className="detail-panel">
-              <h2>
-                {t('stats')} {activeStats.length ? `(${activeStats.length})` : ''}
-              </h2>
+          <section className="detail-panel detail-panel--stats">
+            <div className="detail-panel__head">
+              <h2>{t('statsLive')}</h2>
               {periodTabs.length > 1 ? (
-                <div className="stat-tabs" role="tablist" aria-label="Stat period">
+                <div className="stat-tabs" role="tablist" aria-label={t('stats')}>
                   {periodTabs.map((p, idx) => (
                     <button
                       key={p.name}
@@ -299,17 +398,69 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
                   ))}
                 </div>
               ) : null}
-              {!activeStats.length ? (
-                <p className="muted">{t('noStats')}</p>
-              ) : (
-                <ul className="stat-list">
-                  {activeStats.map((row, idx) => (
-                    <StatBar key={`${row.type}-${idx}`} row={row} />
+            </div>
+
+            {!featured.length && !activeStats.length ? (
+              <p className="muted">{t('noStats')}</p>
+            ) : (
+              <>
+                <ul className="dual-meter-list">
+                  {featured.map((row) => (
+                    <DualMeter
+                      key={row.type}
+                      label={row.type}
+                      home={row.home}
+                      away={row.away}
+                      kind={row.kind}
+                    />
                   ))}
                 </ul>
-              )}
-            </section>
 
+                {extraStats.length > 0 ? (
+                  <div className="stats-more">
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--compact"
+                      aria-expanded={showAllStats}
+                      onClick={() => setShowAllStats((v) => !v)}
+                    >
+                      {showAllStats ? t('statsHideMore') : t('statsShowMore', { n: extraStats.length })}
+                    </button>
+                    {showAllStats ? (
+                      <ul className="dual-meter-list dual-meter-list--more">
+                        {extraStats.map((row, idx) => {
+                          const home = Number(String(row.home ?? '').replace('%', ''));
+                          const away = Number(String(row.away ?? '').replace('%', ''));
+                          if (!Number.isFinite(home) || !Number.isFinite(away)) {
+                            return (
+                              <li key={`${row.type}-${idx}`} className="dual-meter dual-meter--text">
+                                <div className="dual-meter__top">
+                                  <strong>{formatStat(row.home)}</strong>
+                                  <span>{row.type}</span>
+                                  <strong>{formatStat(row.away)}</strong>
+                                </div>
+                              </li>
+                            );
+                          }
+                          return (
+                            <DualMeter
+                              key={`${row.type}-${idx}`}
+                              label={row.type}
+                              home={home}
+                              away={away}
+                              kind={String(row.home).includes('%') ? 'percent' : 'count'}
+                            />
+                          );
+                        })}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            )}
+          </section>
+
+          <div className="detail-grid">
             <section className="detail-panel">
               <h2>{t('timeline')}</h2>
               {!data?.events.length ? (
@@ -318,7 +469,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
                 <ol className="timeline">
                   {data.events.map((ev, idx) => (
                     <li key={`${ev.time}-${ev.type}-${ev.player}-${idx}`} className="timeline__item">
-                      <span className="timeline__min">
+                      <span className="timeline__min num">
                         {ev.time != null ? `${ev.time}${ev.extra ? `+${ev.extra}` : ''}'` : '—'}
                       </span>
                       <span className={`timeline__badge timeline__badge--${ev.type.toLowerCase()}`}>
@@ -337,81 +488,68 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
                 </ol>
               )}
             </section>
-          </div>
 
-          <section className="detail-panel detail-panel--wide">
-            <h2>{t('lineups')}</h2>
-            {!data?.lineups.length ? (
-              <p className="muted">{t('noLineups')}</p>
-            ) : (
-              <div className="lineups">
-                {data.lineups.map((lineup) => (
-                  <div key={lineup.teamId} className="lineup">
-                    <header>
-                      {lineup.teamLogo ? <img src={lineup.teamLogo} alt="" width={22} height={22} /> : null}
-                      <strong>{lineup.teamName}</strong>
-                      <span>{lineup.formation ?? 'Formation TBA'}</span>
-                    </header>
-                    {lineup.coach ? <p className="muted">Coach: {lineup.coach}</p> : null}
-                    <h3>XI</h3>
-                    <ul>
-                      {lineup.startXI.map((p) => (
-                        <li key={`${lineup.teamId}-xi-${p.number}-${p.name}`}>
-                          <span>{p.number ?? '—'}</span>
-                          {p.name}
-                          {p.pos ? <em>{p.pos}</em> : null}
-                        </li>
-                      ))}
-                    </ul>
-                    {lineup.substitutes.length > 0 ? (
-                      <>
-                        <h3>Bench</h3>
-                        <ul>
-                          {lineup.substitutes.map((p) => (
-                            <li key={`${lineup.teamId}-sub-${p.number}-${p.name}`}>
-                              <span>{p.number ?? '—'}</span>
-                              {p.name}
-                            </li>
-                          ))}
-                        </ul>
-                      </>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+            <section className="detail-panel">
+              <h2>{t('lineups')}</h2>
+              {!data?.lineups.length ? (
+                <p className="muted">{t('noLineups')}</p>
+              ) : (
+                <div className="lineups">
+                  {data.lineups.map((lineup) => (
+                    <div key={lineup.teamId} className="lineup">
+                      <header>
+                        {lineup.teamLogo ? (
+                          <img src={lineup.teamLogo} alt="" width={22} height={22} />
+                        ) : null}
+                        <strong>{lineup.teamName}</strong>
+                        <span>{lineup.formation ?? 'Formation TBA'}</span>
+                      </header>
+                      {lineup.coach ? <p className="muted">Coach: {lineup.coach}</p> : null}
+                      <h3>XI</h3>
+                      <ul>
+                        {lineup.startXI.map((p) => (
+                          <li key={`${lineup.teamId}-xi-${p.number}-${p.name}`}>
+                            <span className="num">{p.number ?? '—'}</span>
+                            {p.name}
+                            {p.pos ? <em>{p.pos}</em> : null}
+                          </li>
+                        ))}
+                      </ul>
+                      {lineup.substitutes.length > 0 ? (
+                        <>
+                          <h3>Bench</h3>
+                          <ul>
+                            {lineup.substitutes.map((p) => (
+                              <li key={`${lineup.teamId}-sub-${p.number}-${p.name}`}>
+                                <span className="num">{p.number ?? '—'}</span>
+                                {p.name}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
         </>
       ) : null}
     </section>
   );
 }
 
-function StatBar({ row }: { row: MatchStatRow }) {
-  const homeNum = parseStat(row.home);
-  const awayNum = parseStat(row.away);
-  const total = homeNum + awayNum;
-  const homePct = total > 0 ? (homeNum / total) * 100 : 50;
-
-  return (
-    <li className="stat-row">
-      <div className="stat-row__values">
-        <strong>{formatStat(row.home)}</strong>
-        <span>{row.type}</span>
-        <strong>{formatStat(row.away)}</strong>
-      </div>
-      <div className="stat-row__bar" aria-hidden>
-        <i style={{ width: `${homePct}%` }} />
-      </div>
-    </li>
-  );
+function levelWord(level: PulseLevel, t: ReturnType<typeof useI18n>['t']): string {
+  if (level === 'high') return t('pulseHigh');
+  if (level === 'med') return t('pulseMed');
+  return t('pulseLow');
 }
 
-function parseStat(value: string | number | null): number {
-  if (value == null) return 0;
-  if (typeof value === 'number') return value;
-  const n = Number.parseFloat(value.replace('%', ''));
-  return Number.isFinite(n) ? n : 0;
+function levelFromIntensity(n: number): PulseLevel {
+  if (n >= 0.65) return 'high';
+  if (n >= 0.35) return 'med';
+  return 'low';
 }
 
 function formatStat(value: string | number | null): string {
