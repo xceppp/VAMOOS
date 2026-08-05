@@ -2,6 +2,7 @@ import { memo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nProvider';
 import type { LiveMatch } from '../types';
+import { ChanceBar, probsFromOdds } from './ChanceBar';
 
 interface MatchCardProps {
   match: LiveMatch;
@@ -38,7 +39,7 @@ function TeamAvatar({ logo, name }: { logo?: string; name: string }) {
       />
     );
   }
-  return <span className="avatar">{initials(name)}</span>;
+  return <span className="avatar num">{initials(name)}</span>;
 }
 
 function formatKickoff(iso: string | undefined, lang: string): string {
@@ -52,13 +53,19 @@ function formatKickoff(iso: string | undefined, lang: string): string {
   });
 }
 
-function isLiveStatus(status: string): boolean {
-  return ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE'].includes(status);
+function relativeKickoff(iso: string | undefined, t: ReturnType<typeof useI18n>['t']): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const mins = Math.round((d.getTime() - Date.now()) / 60_000);
+  if (mins <= 0) return t('kickSoon');
+  if (mins < 60) return t('kickSoon');
+  if (mins < 48 * 60) return t('kickInHours', { n: Math.round(mins / 60) });
+  return t('kickLater');
 }
 
-function fmtOdd(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  return n.toFixed(2);
+function isLiveStatus(status: string): boolean {
+  return ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE'].includes(status);
 }
 
 function MatchCardInner({
@@ -89,14 +96,14 @@ function MatchCardInner({
       stats.possessionAway != null ||
       stats.cornersHome != null ||
       stats.cornersAway != null);
-  const hasOdds =
-    !isUpcoming && odds != null && (odds.home != null || odds.draw != null || odds.away != null);
+  const chanceProbs = odds ? probsFromOdds(odds) : null;
 
   return (
     <article
       id={cardId ?? `match-${match.id}`}
       className={[
         'match-card',
+        'match-card--facing',
         'match-card--clickable',
         highlight ? 'match-card--pulse' : '',
         isUpcoming ? 'match-card--upcoming' : '',
@@ -114,88 +121,85 @@ function MatchCardInner({
         }
       }}
     >
-      <div className="card-top">
-        <div className="card-top__left">
-          {!hideLeague ? <span className="match-card__league">{match.league}</span> : null}
+      {!hideLeague ? (
+        <p className="match-card__league eyebrow">{match.league}</p>
+      ) : null}
+
+      <div className="match-card__row">
+        <div className="match-card__kick">
           {live ? (
             <span className="badge-live">
-              <span className="pulse-wrap" aria-hidden>
-                <span className="pulse-ring" />
-                <span className="pulse-dot" />
-              </span>
-              {showClock ? `${match.elapsed}'` : match.status}
+              <span className="live-dot" aria-hidden />
+              <span className="num">{showClock ? `${match.elapsed}'` : match.status}</span>
             </span>
           ) : isUpcoming ? (
-            <span className="match-card__status">{formatKickoff(match.kickoff, lang)}</span>
+            <>
+              <span className="num match-card__kick-time">{formatKickoff(match.kickoff, lang)}</span>
+              <span className="match-card__kick-sub">{relativeKickoff(match.kickoff, t)}</span>
+            </>
           ) : (
-            <span className="match-card__status">{match.status}</span>
+            <span className="match-card__status num">{match.status}</span>
           )}
         </div>
+
+        <div className="match-card__face">
+          <div className={`match-card__side match-card__side--home${homeLeads ? ' is-lead' : ''}`}>
+            <TeamAvatar logo={match.home.logo} name={match.home.name} />
+            <span className="team-name">{match.home.name}</span>
+          </div>
+
+          <div className="match-card__scoreline" aria-label={`${home}–${away}`}>
+            <span className={`num score${homeLeads ? ' lead' : ''}`}>{isUpcoming ? '–' : home}</span>
+            <span className="score-sep" aria-hidden>
+              –
+            </span>
+            <span className={`num score${awayLeads ? ' lead' : ''}`}>{isUpcoming ? '–' : away}</span>
+          </div>
+
+          <div className={`match-card__side match-card__side--away${awayLeads ? ' is-lead' : ''}`}>
+            <span className="team-name">{match.away.name}</span>
+            <TeamAvatar logo={match.away.logo} name={match.away.name} />
+          </div>
+        </div>
+
+        {chanceProbs ? (
+          <div className="match-card__chance">
+            <ChanceBar
+              compact
+              home={chanceProbs.home}
+              draw={chanceProbs.draw}
+              away={chanceProbs.away}
+              odds={odds}
+            />
+          </div>
+        ) : null}
+
         <button
           type="button"
           className={`star${favorited ? ' on' : ''}`}
           aria-label={favorited ? t('favorited') : t('addFavorite')}
+          aria-pressed={favorited}
           onClick={(e) => {
             e.stopPropagation();
             onToggleFavorite(match.id);
           }}
         >
-          <i className={favorited ? 'ti ti-star-filled' : 'ti ti-star'} aria-hidden />
+          <i className={favorited ? 'ti ti-bell-filled' : 'ti ti-bell'} aria-hidden />
         </button>
       </div>
 
-      <div className="team-row">
-        <div className="team">
-          <TeamAvatar logo={match.home.logo} name={match.home.name} />
-          <span className="team-name">{match.home.name}</span>
-          {hasSideStats && stats?.possessionHome != null ? (
-            <span className="side-chip">{stats.possessionHome}%</span>
-          ) : null}
-          {hasSideStats && stats?.cornersHome != null ? (
-            <span className="side-chip side-chip--corner">
-              <img src="/corner.png" alt="" width={10} height={10} />
-              {stats.cornersHome}
+      {hasSideStats ? (
+        <div className="match-card__stats num" aria-label={t('liveMatchStats')}>
+          {stats?.possessionHome != null && stats?.possessionAway != null ? (
+            <span>
+              {stats.possessionHome}%–{stats.possessionAway}%
             </span>
           ) : null}
-        </div>
-        <span className={`score${isUpcoming ? '' : homeLeads ? ' lead' : ''}`}>
-          {isUpcoming ? '–' : home}
-        </span>
-      </div>
-
-      <div className="team-row">
-        <div className="team">
-          <TeamAvatar logo={match.away.logo} name={match.away.name} />
-          <span className="team-name">{match.away.name}</span>
-          {hasSideStats && stats?.possessionAway != null ? (
-            <span className="side-chip">{stats.possessionAway}%</span>
-          ) : null}
-          {hasSideStats && stats?.cornersAway != null ? (
-            <span className="side-chip side-chip--corner">
-              <img src="/corner.png" alt="" width={10} height={10} />
-              {stats.cornersAway}
+          {stats?.cornersHome != null && stats?.cornersAway != null ? (
+            <span>
+              {t('statCorner')} {stats.cornersHome}–{stats.cornersAway}
             </span>
           ) : null}
-        </div>
-        <span className={`score${isUpcoming ? '' : awayLeads ? ' lead' : ''}`}>
-          {isUpcoming ? '–' : away}
-        </span>
-      </div>
-
-      {hasOdds ? (
-        <div className="match-odds match-odds--inline" aria-label="1X2">
-          <span>
-            <em>1</em>
-            {fmtOdd(odds?.home)}
-          </span>
-          <span>
-            <em>X</em>
-            {fmtOdd(odds?.draw)}
-          </span>
-          <span>
-            <em>2</em>
-            {fmtOdd(odds?.away)}
-          </span>
         </div>
       ) : null}
 

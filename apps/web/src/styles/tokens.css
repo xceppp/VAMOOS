@@ -1,48 +1,171 @@
-/* VAMOOS premium tokens — dark only */
+/* Vamoos design tokens — dusk (default) + day */
 
-:root,
-[data-theme='dark'] {
-  color-scheme: dark;
-  --bg: #0f1215;
-  --surface: #171a1f;
-  --surface-2: #1d2126;
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --text: #f2f0ea;
-  --text-secondary: #b8bcc2;
-  --text-muted: #8b9098;
-  --gold: #bfa06e;
-  --gold-soft: rgba(191, 160, 110, 0.14);
-  --gold-text: #d4bc8e;
-  --red: #d66b62;
-  --red-soft: rgba(214, 107, 98, 0.16);
+:root {
+  --pitch: #4e9c77;
+  --saffron: #e3a93f;
+  --zellij: #6c9ec9;
+  --clay: #c9776c;
+  --r-s: 8px;
+  --r-m: 14px;
+  --r-l: 20px;
+  --pad: clamp(16px, 3vw, 28px);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 
-  --ink: var(--text);
-  --ink-soft: var(--text-secondary);
-  --line: var(--border);
-  --flame: var(--red);
-  --acid: var(--gold);
-  --panel: var(--surface);
-  --pitch: var(--surface-2);
-  --pitch-bright: var(--gold);
-  --bg-deep: var(--bg);
-  --shadow: none;
-  --radius: 14px;
-  --font-ui: 'Manrope', system-ui, sans-serif;
-  --font-score: 'Space Grotesk', 'Manrope', sans-serif;
-  --font-display: var(--font-ui);
+  --font-display: 'Familjen Grotesk', system-ui, sans-serif;
+  --font-ui: 'Inter Tight', system-ui, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-ar: 'Noto Kufi Arabic', 'Inter Tight', sans-serif;
+  --font-score: var(--font-data);
   --font-body: var(--font-ui);
 }
 
-[dir='rtl'] body {
-  font-family: 'Almarai', var(--font-ui), sans-serif;
-  font-weight: 400;
+/* Dusk — default */
+:root,
+[data-theme='dusk'],
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0d1317;
+  --bg2: #111a1f;
+  --card: #161f25;
+  --card2: #1b262d;
+  --line: #24323a;
+  --line-soft: #1b252b;
+  --text: #e9e5db;
+  --text2: #a2b0b8;
+  --text3: #6e8089;
+  --pitch-wash: rgba(78, 156, 119, 0.13);
+  --zellij-wash: rgba(108, 158, 201, 0.13);
+  --saffron-wash: rgba(227, 169, 63, 0.12);
+  --clay-wash: rgba(201, 119, 108, 0.12);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 28px rgba(0, 0, 0, 0.35);
+
+  /* Legacy aliases used across index.css */
+  --surface: var(--card);
+  --surface-2: var(--card2);
+  --border: var(--line);
+  --border-strong: color-mix(in srgb, var(--line) 80%, var(--text3));
+  --text-secondary: var(--text2);
+  --text-muted: var(--text3);
+  --gold: var(--saffron);
+  --gold-soft: var(--saffron-wash);
+  --gold-text: var(--saffron);
+  --red: var(--clay);
+  --red-soft: var(--clay-wash);
+  --ink: var(--text);
+  --ink-soft: var(--text2);
+  --flame: var(--clay);
+  --acid: var(--saffron);
+  --panel: var(--card);
+  --pitch-bright: var(--pitch);
+  --bg-deep: var(--bg);
+  --radius: var(--r-m);
+
+  /* Risk chips — muted, equal weight */
+  --risk-pos-bg: var(--pitch-wash);
+  --risk-pos-fg: var(--pitch);
+  --risk-mid-bg: var(--saffron-wash);
+  --risk-mid-fg: var(--saffron);
+  --risk-neg-bg: var(--clay-wash);
+  --risk-neg-fg: var(--clay);
 }
 
-[dir='rtl'] .score,
-[dir='rtl'] .score-num,
-[dir='rtl'] .kickoff-time,
-[dir='rtl'] .pred-card__pct,
-[dir='rtl'] .goal-alert__score {
-  font-family: var(--font-score);
+[data-theme='day'] {
+  color-scheme: light;
+  --bg: #e9edea;
+  --bg2: #e2e7e3;
+  --card: #fbfcfb;
+  --card2: #f2f5f2;
+  --line: #d0d9d3;
+  --line-soft: #dfe5e1;
+  --text: #16211e;
+  --text2: #4f5f5a;
+  --text3: #7c8b86;
+  --pitch: #2f7355;
+  --saffron: #a9761b;
+  --zellij: #3b6d95;
+  --clay: #a0544a;
+  --pitch-wash: rgba(47, 115, 85, 0.12);
+  --zellij-wash: rgba(59, 109, 149, 0.12);
+  --saffron-wash: rgba(169, 118, 27, 0.12);
+  --clay-wash: rgba(160, 84, 74, 0.12);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 8px 24px rgba(22, 33, 30, 0.08);
+
+  --surface: var(--card);
+  --surface-2: var(--card2);
+  --border: var(--line);
+  --border-strong: color-mix(in srgb, var(--line) 70%, var(--text3));
+  --text-secondary: var(--text2);
+  --text-muted: var(--text3);
+  --gold: var(--saffron);
+  --gold-soft: var(--saffron-wash);
+  --gold-text: var(--saffron);
+  --red: var(--clay);
+  --red-soft: var(--clay-wash);
+  --ink: var(--text);
+  --ink-soft: var(--text2);
+  --flame: var(--clay);
+  --acid: var(--saffron);
+  --panel: var(--card);
+  --pitch-bright: var(--pitch);
+  --bg-deep: var(--bg);
+  --risk-pos-bg: var(--pitch-wash);
+  --risk-pos-fg: var(--pitch);
+  --risk-mid-bg: var(--saffron-wash);
+  --risk-mid-fg: var(--saffron);
+  --risk-neg-bg: var(--clay-wash);
+  --risk-neg-fg: var(--clay);
+}
+
+html {
+  transition:
+    background 0.4s var(--ease),
+    color 0.4s var(--ease);
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+  transition:
+    background 0.4s var(--ease),
+    color 0.4s var(--ease);
+}
+
+.num {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+html[lang='ar'] body,
+html[dir='rtl'] body {
+  font-family: var(--font-ar);
+  line-height: 1.85;
+}
+
+html[lang='ar'] .num,
+html[dir='rtl'] .num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: var(--font-data);
+}
+
+html[lang='ar'] .section-label,
+html[lang='ar'] .eyebrow,
+html[dir='rtl'] .section-label,
+html[dir='rtl'] .eyebrow {
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }

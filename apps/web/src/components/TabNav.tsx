@@ -57,7 +57,7 @@ export function TabNav({ items }: TabNavProps) {
   }, [activeTo, dir]);
 
   return (
-    <nav className="tab-nav" aria-label="Primary" ref={listRef as never}>
+    <nav className="tab-nav" aria-label={dir === 'rtl' ? 'Primary' : 'Primary'} ref={listRef as never}>
       <div className="tab-nav__track">
         {items.map((item) => (
           <NavLink
@@ -65,6 +65,13 @@ export function TabNav({ items }: TabNavProps) {
             to={item.to}
             end={item.end}
             className={({ isActive }) => `tab-nav__item${isActive ? ' tab-nav__item--active' : ''}`}
+            aria-current={
+              (item.end
+                ? location.pathname === item.to
+                : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`))
+                ? 'page'
+                : undefined
+            }
             ref={(node) => {
               if (node) itemRefs.current.set(item.to, node);
               else itemRefs.current.delete(item.to);
@@ -76,7 +83,7 @@ export function TabNav({ items }: TabNavProps) {
         ))}
         <span
           className="tab-nav__indicator"
-          style={{ left: indicator.left, width: indicator.width }}
+          style={{ insetInlineStart: indicator.left, width: indicator.width }}
           aria-hidden
         />
       </div>

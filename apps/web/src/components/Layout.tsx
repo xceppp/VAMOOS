@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
+import { useTheme } from '../theme/ThemeProvider';
 import { SiteFooter } from './SiteFooter';
 import { TabNav, type TabItem } from './TabNav';
 
@@ -13,6 +14,7 @@ interface LayoutProps {
 
 export function Layout({ children, mode, connected, rateLimited, notice }: LayoutProps) {
   const { t, lang, setLang } = useI18n();
+  const { theme, toggleTheme } = useTheme();
 
   const tabs: TabItem[] = [
     { to: '/', label: t('navLive'), short: t('navLiveShort'), end: true },
@@ -31,14 +33,22 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
           ? t('connected')
           : mode;
 
+  const showLiveChip = connected && (mode === 'live' || mode === 'demo');
+
   return (
     <div className="app-shell">
       <header className="topbar">
         <div className="logo">
-          <div className="logo-mark" aria-hidden>
-            <i className="ti ti-ball-football" />
-          </div>
-          <span className="logo-text">{t('brand')}</span>
+          <span className="logo-text">
+            VAMOOS<span className="logo-dot">.</span>
+          </span>
+          {/* TODO: needs liveMatchCount — chip shows presence only until Layout receives a count */}
+          {showLiveChip ? (
+            <span className="live-chip" title={modeLabel}>
+              <span className="live-dot" aria-hidden />
+              {t('liveChip')}
+            </span>
+          ) : null}
         </div>
 
         <div className="header-right">
@@ -59,19 +69,42 @@ export function Layout({ children, mode, connected, rateLimited, notice }: Layou
             </button>
           </div>
 
+          <button
+            type="button"
+            className="icon-btn theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === 'dusk' ? t('themeDay') : t('themeDusk')}
+            title={theme === 'dusk' ? t('themeDay') : t('themeDusk')}
+          >
+            <i className={theme === 'dusk' ? 'ti ti-sun' : 'ti ti-moon'} aria-hidden />
+          </button>
+
+          {/* TODO: needs user avatar — no accounts in app today */}
+
           <div className="conn" title={connected ? modeLabel : t('reconnecting')}>
             <span className={`dot${connected ? (rateLimited ? ' dot--warn' : ' dot--on') : ''}`} />
           </div>
         </div>
       </header>
 
-      <TabNav items={tabs} />
+      <div className="shell-body">
+        {/*
+          TODO: needs league summaries from live matches for a leagues rail block
+          TODO: needs time-on-app / spending limit for session panel
+          TabNav is restyled as sticky left rail ≥961px and fixed bottom bar ≤960px
+        */}
+        <aside className="shell-rail">
+          <TabNav items={tabs} />
+        </aside>
 
-      {notice && rateLimited ? (
-        <div className="notice-banner notice-banner--warn">{notice}</div>
-      ) : null}
-      <main className="main">{children}</main>
-      <SiteFooter />
+        <div className="shell-main">
+          {notice && rateLimited ? (
+            <div className="notice-banner notice-banner--warn">{notice}</div>
+          ) : null}
+          <main className="main">{children}</main>
+          <SiteFooter />
+        </div>
+      </div>
     </div>
   );
 }

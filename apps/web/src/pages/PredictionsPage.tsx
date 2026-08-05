@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
+import { ChanceBar } from '../components/ChanceBar';
 import { PredictionCard } from '../components/PredictionCard';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
@@ -32,19 +33,25 @@ function PickCard({ pick }: { pick: DixonPick }) {
     pick.minute != null ? `${pick.minute}'` : null,
   ].filter(Boolean);
   const href = pick.liveId ? `/match/${pick.liveId}` : undefined;
+  const probs = pick.prob;
 
   return (
-    <PredictionCard
-      home={pick.home}
-      away={pick.away}
-      pick={pick.pick}
-      confidence={pick.confidence}
-      scoreline={pick.mostLikelyScore}
-      meta={metaBits.join(' · ') || undefined}
-      markets={pick.markets}
-      href={href}
-      risk={riskOf(pick)}
-    />
+    <div className="pred-pick-wrap">
+      <PredictionCard
+        home={pick.home}
+        away={pick.away}
+        pick={pick.pick}
+        confidence={pick.confidence}
+        scoreline={pick.mostLikelyScore}
+        meta={metaBits.join(' · ') || undefined}
+        markets={pick.markets}
+        href={href}
+        risk={riskOf(pick)}
+      />
+      {probs ? (
+        <ChanceBar home={probs.home} draw={probs.draw} away={probs.away} />
+      ) : null}
+    </div>
   );
 }
 
@@ -72,22 +79,22 @@ function HeatCard({
 
   const body = (
     <>
-      <p className="pred-card__match">
-        {pick.home} vs {pick.away}
-        <span className="pred-card__meta">
-          {' '}
-          · {pick.score} · {pick.minute}'
+      <div className="pred-card__face">
+        <span className="pred-card__team pred-card__team--home">{pick.home}</span>
+        <span className="pred-card__vs num">
+          {pick.score} · {pick.minute}'
         </span>
-      </p>
+        <span className="pred-card__team pred-card__team--away">{pick.away}</span>
+      </div>
       <p className="pred-card__league-line">{pick.league}</p>
       <p className="pred-card__pick">{headline}</p>
       <ul className="pred-card__markets" aria-label={t('predMarketsAria')}>
         <li className="pred-card__market">
           <span className="pred-card__market-label">{t('predHeatCorners')}</span>
-          <span className="pred-card__market-value">
-            {pick.cornersHome}-{pick.cornersAway} ({pick.cornersTotal})
+          <span className="pred-card__market-value num">
+            {pick.cornersHome}–{pick.cornersAway} ({pick.cornersTotal})
           </span>
-          <span className="pred-card__market-prob">{pct(pick.pNextCorner)}</span>
+          <span className="pred-card__market-prob num">{pct(pick.pNextCorner)}</span>
         </li>
         <li className="pred-card__market">
           <span className="pred-card__market-label">{t('predHeatMoreCorners')}</span>
@@ -98,10 +105,10 @@ function HeatCard({
         </li>
         <li className="pred-card__market">
           <span className="pred-card__market-label">{t('predHeatSot')}</span>
-          <span className="pred-card__market-value">
-            {pick.shotsOnHome}-{pick.shotsOnAway} ({pick.shotsOnTotal})
+          <span className="pred-card__market-value num">
+            {pick.shotsOnHome}–{pick.shotsOnAway} ({pick.shotsOnTotal})
           </span>
-          <span className="pred-card__market-prob">{pct(pick.pNextGoal)}</span>
+          <span className="pred-card__market-prob num">{pct(pick.pNextGoal)}</span>
         </li>
         <li className="pred-card__market">
           <span className="pred-card__market-label">{t('predHeatMoreGoals')}</span>
@@ -111,13 +118,17 @@ function HeatCard({
           <span className="pred-card__market-prob">{pick.goalPick}</span>
         </li>
       </ul>
-      <div className={`pred-heat-risk pred-heat-risk--${risk}`}>{risk}</div>
+      <div className={`pred-heat-risk pred-heat-risk--${risk}`}>
+        {risk === 'green' ? t('riskBet') : risk === 'orange' ? t('riskMaybe') : t('riskSkip')}
+        {' · '}
+        <span className="num">
+          {confPct}% {t('predConfidence')}
+        </span>
+      </div>
       <div className="pred-card__bar" aria-hidden>
         <span className="pred-card__bar-fill" style={{ width: `${confPct}%` }} />
       </div>
-      <p className="pred-card__pct">
-        {confPct}% {t('predConfidence')}
-      </p>
+      <p className="chance-bar__caveat">{t('chanceCaveat')}</p>
     </>
   );
 

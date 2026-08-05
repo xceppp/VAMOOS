@@ -30,9 +30,12 @@ export function PredictionCard({
   markets,
   href,
   external,
+  risk,
 }: PredictionCardProps) {
   const { t } = useI18n();
   const confPct = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
+  const riskLabel =
+    risk === 'green' ? t('riskBet') : risk === 'orange' ? t('riskMaybe') : risk === 'red' ? t('riskSkip') : null;
 
   const rows: Array<{ key: string; label: string; value: string; sub?: string }> = [];
   if (markets) {
@@ -80,10 +83,12 @@ export function PredictionCard({
 
   const body = (
     <>
-      <p className="pred-card__match">
-        {home} vs {away}
-        {meta ? <span className="pred-card__meta"> · {meta}</span> : null}
-      </p>
+      <div className="pred-card__face">
+        <span className="pred-card__team pred-card__team--home">{home}</span>
+        <span className="pred-card__vs num">–</span>
+        <span className="pred-card__team pred-card__team--away">{away}</span>
+      </div>
+      {meta ? <p className="pred-card__meta">{meta}</p> : null}
       <p className="pred-card__pick">{pick}</p>
       {scoreline ? <p className="pred-card__scoreline">{t('predLikelyScore', { s: scoreline })}</p> : null}
 
@@ -93,18 +98,24 @@ export function PredictionCard({
             <li key={r.key} className="pred-card__market">
               <span className="pred-card__market-label">{r.label}</span>
               <span className="pred-card__market-value">{r.value}</span>
-              <span className="pred-card__market-prob">{r.sub}</span>
+              <span className="pred-card__market-prob num">{r.sub}</span>
             </li>
           ))}
         </ul>
       ) : null}
 
-      <div className="pred-card__bar" aria-hidden>
-        <span className="pred-card__bar-fill" style={{ width: `${confPct}%` }} />
+      <div className="pred-card__footer">
+        <div className="pred-card__bar" aria-hidden>
+          <span className="pred-card__bar-fill" style={{ width: `${confPct}%` }} />
+        </div>
+        <p className="pred-card__pct num">
+          {confPct}% {t('predConfidence')}
+          {riskLabel ? (
+            <span className={`pred-card__risk pred-card__risk--${risk ?? 'orange'}`}> · {riskLabel}</span>
+          ) : null}
+        </p>
+        <p className="chance-bar__caveat">{t('chanceCaveat')}</p>
       </div>
-      <p className="pred-card__pct">
-        {confPct}% {t('predConfidence')}
-      </p>
     </>
   );
 

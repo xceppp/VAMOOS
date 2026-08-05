@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
+import { ChanceBar, probsFromOdds } from '../components/ChanceBar';
 import { useI18n } from '../i18n/I18nProvider';
 import { apiUrl } from '../lib/apiBase';
 import type { LiveMatch } from '../types';
@@ -212,6 +213,38 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
     return buildMatchAnalysis(match.home.name, match.away.name, activeStats, t);
   }, [match, activeStats, t]);
 
+  const chanceProbs = useMemo(() => {
+    if (!match?.odds) return null;
+    return probsFromOdds(match.odds);
+  }, [match?.odds]);
+
+  const stripStats = useMemo(() => {
+    const cells: Array<{ label: string; home: number; away: number }> = [];
+    const poss = numStat(activeStats, 'Ball Possession') ?? numStat(activeStats, 'Possession');
+    const sot =
+      numStat(activeStats, 'Shots on Goal') ?? numStat(activeStats, 'Shots on Target');
+    const corners = numStat(activeStats, 'Corner Kicks') ?? numStat(activeStats, 'Corners');
+    // TODO: needs xG on live match detail payload — omit Expected goals cell until present
+    if (poss) cells.push({ label: t('statPoss'), home: poss.home, away: poss.away });
+    if (sot) cells.push({ label: t('statSot'), home: sot.home, away: sot.away });
+    if (corners) cells.push({ label: t('statCorners'), home: corners.home, away: corners.away });
+    if (match?.stats?.possessionHome != null && match.stats.possessionAway != null && !poss) {
+      cells.push({
+        label: t('statPoss'),
+        home: match.stats.possessionHome,
+        away: match.stats.possessionAway,
+      });
+    }
+    if (match?.stats?.cornersHome != null && match.stats.cornersAway != null && !corners) {
+      cells.push({
+        label: t('statCorners'),
+        home: match.stats.cornersHome,
+        away: match.stats.cornersAway,
+      });
+    }
+    return cells;
+  }, [activeStats, match, t]);
+
   return (
     <section className="page page--detail">
       <Link to="/" className="back-link">
@@ -224,7 +257,7 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
       {match ? (
         <>
           <header className="detail-hero">
-            <div className="detail-hero__meta">
+            <div className="detail-hero__meta eyebrow">
               <span>{match.league}</span>
               {match.country ? <span>· {match.country}</span> : null}
               {data?.round ? <span>· {data.round}</span> : null}
@@ -232,32 +265,69 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
 
             <div className="detail-hero__scoreboard">
               <div className="detail-hero__team">
-                {match.home.logo ? <img src={match.home.logo} alt="" /> : <span className="crest crest--fallback" />}
+                {match.home.logo ? <img src={match.home.logo} alt="" /> : <span className="crest crest--fallback num">{match.home.name.slice(0, 3)}</span>}
                 <strong>{match.home.name}</strong>
               </div>
               <div className="detail-hero__score">
-                <span>
+                <span className="num">
                   {match.goals.home ?? 0}
                   <i>–</i>
                   {match.goals.away ?? 0}
                 </span>
-                <em>
+                <em className="num">
                   {match.elapsed != null &&
-                  ['1H', '2H', 'ET', 'BT', 'P', 'LIVE'].includes(match.status)
-                    ? `${match.elapsed}'`
-                    : match.status}
+                  ['1H', '2H', 'ET', 'BT', 'P', 'LIVE'].includes(match.status) ? (
+                    <>
+                      <span className="live-dot" aria-hidden />
+                      {`${match.elapsed}'`}
+                    </>
+                  ) : (
+                    match.status
+                  )}
                 </em>
               </div>
               <div className="detail-hero__team detail-hero__team--away">
-                {match.away.logo ? <img src={match.away.logo} alt="" /> : <span className="crest crest--fallback" />}
+                {match.away.logo ? <img src={match.away.logo} alt="" /> : <span className="crest crest--fallback num">{match.away.name.slice(0, 3)}</span>}
                 <strong>{match.away.name}</strong>
               </div>
             </div>
+
+            {/* TODO: needs per-minute momentum array — pressure ribbon omitted */}
+
+            {chanceProbs ? (
+              <ChanceBar
+                home={chanceProbs.home}
+                draw={chanceProbs.draw}
+                away={chanceProbs.away}
+                odds={match.odds}
+              />
+            ) : null}
+
+            {stripStats.length > 0 ? (
+              <div className="stat-strip">
+                {stripStats.map((cell) => {
+                  const sum = cell.home + cell.away || 1;
+                  return (
+                    <div key={cell.label} className="stat-strip__cell">
+                      <span className="stat-strip__label">{cell.label}</span>
+                      <span className="stat-strip__vals num">
+                        {cell.home} – {cell.away}
+                      </span>
+                      <span className="stat-strip__bar" aria-hidden>
+                        <i style={{ width: `${(cell.home / sum) * 100}%` }} />
+                        <b style={{ width: `${(cell.away / sum) * 100}%` }} />
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
 
             <div className="detail-hero__actions">
               <button
                 type="button"
                 className={`btn ${favorited ? 'btn--primary' : 'btn--ghost'}`}
+                aria-pressed={favorited}
                 onClick={() => onToggle(match.id)}
               >
                 {favorited ? t('favorited') : t('addFavorite')}
@@ -279,6 +349,9 @@ export function MatchDetailPage({ liveMatches, isFav, onToggle }: MatchDetailPag
           ) : (
             <p className="page-lede muted">{t('matchAnalysisPending')}</p>
           )}
+
+          {/* TODO: needs insight feed with sample size + confidence — insight cards omitted */}
+          {/* TODO: needs user betting record / session limits — record section omitted */}
 
           <AdSlot format="banner" className="ad-slot--feed" />
 
